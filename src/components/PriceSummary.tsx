@@ -4,6 +4,7 @@ import type { Currency } from "@/types";
 import type { CalculationResult } from "@/lib/calculator";
 import { convertFromPKR, formatCurrency } from "@/lib/calculator";
 import { Users, Tag, TrendingDown, Wallet, Printer } from "lucide-react";
+import Logo from "@/components/Logo";
 
 interface Props {
   result: CalculationResult;
@@ -17,9 +18,14 @@ export default function PriceSummary({ result, currency }: Props) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
       {/* Print-only header */}
-      <div className="hidden print:block px-6 pt-6 pb-2 border-b border-gray-100">
-        <h1 className="text-xl font-bold text-emerald-800">Umrah Package Calculator</h1>
-        <p className="text-xs text-gray-400 mt-0.5">Estimate generated on {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</p>
+      <div className="hidden print:flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-100">
+        <div className="bg-emerald-800 rounded-xl p-1.5 shrink-0">
+          <Logo className="w-8 h-8" />
+        </div>
+        <div>
+          <h1 className="text-lg font-bold text-emerald-800 leading-tight">Umrah Calculator</h1>
+          <p className="text-xs text-gray-400 mt-0.5">Estimate generated on {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</p>
+        </div>
       </div>
 
       <div className="bg-gradient-to-r from-emerald-700 to-emerald-500 px-6 py-4 flex items-center justify-between gap-4 print:bg-none print:bg-emerald-700">

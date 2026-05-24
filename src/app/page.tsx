@@ -7,6 +7,7 @@ import { calculate } from "@/lib/calculator";
 import PackageCard from "@/components/PackageCard";
 import CurrencySelector from "@/components/CurrencySelector";
 import PriceSummary from "@/components/PriceSummary";
+import Logo from "@/components/Logo";
 import { MapPin, Users, Moon } from "lucide-react";
 
 export default function Home() {
@@ -26,10 +27,20 @@ export default function Home() {
     <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-xl font-bold text-emerald-800">Umrah Package Calculator</h1>
-            <p className="text-xs text-gray-400">Estimate your Umrah journey cost</p>
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="bg-emerald-800 rounded-xl p-2 shrink-0">
+              <Logo className="w-8 h-8" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold text-emerald-800 leading-tight">Umrah Calculator</h1>
+                <span className="hidden sm:inline-block text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full uppercase tracking-wide">
+                  PKR
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 leading-tight">Estimate your Umrah journey cost</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500 hidden sm:block">Display in:</span>
