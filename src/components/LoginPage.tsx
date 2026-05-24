@@ -6,9 +6,11 @@ import Logo from "@/components/Logo";
 import { Check } from "lucide-react";
 
 export default function LoginPage() {
-  const { signInWithGoogle, signInWithFacebook, signInWithMicrosoft } = useAuth();
+  const { signInWithGoogle, signInWithFacebook, signInWithMicrosoft, redirectError } = useAuth();
   const [error, setError]     = useState("");
   const [loading, setLoading] = useState<string | null>(null);
+
+  const displayError = error || redirectError;
 
   function handleLogin(provider: "google" | "facebook" | "microsoft") {
     setError("");
@@ -16,11 +18,10 @@ export default function LoginPage() {
     const fn = provider === "google" ? signInWithGoogle
       : provider === "facebook"  ? signInWithFacebook
       : signInWithMicrosoft;
-    // Call fn() synchronously so signInWithPopup runs in the same user-gesture frame.
-    // Errors are handled via .catch instead of try/await to avoid extra async wrappers.
     fn().catch((e: unknown) => {
       setError(e instanceof Error ? e.message : "Login failed. Please try again.");
-    }).finally(() => setLoading(null));
+      setLoading(null);
+    });
   }
 
   return (
@@ -122,9 +123,9 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {error && (
+            {displayError && (
               <div className="mt-4 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+                <p className="text-xs text-red-600 dark:text-red-400">{displayError}</p>
               </div>
             )}
 
