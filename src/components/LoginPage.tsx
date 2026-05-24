@@ -6,11 +6,9 @@ import Logo from "@/components/Logo";
 import { Check } from "lucide-react";
 
 export default function LoginPage() {
-  const { signInWithGoogle, signInWithFacebook, signInWithMicrosoft, redirectError } = useAuth();
+  const { signInWithGoogle, signInWithFacebook, signInWithMicrosoft } = useAuth();
   const [error, setError]     = useState("");
   const [loading, setLoading] = useState<string | null>(null);
-
-  const displayError = error || redirectError;
 
   function handleLogin(provider: "google" | "facebook" | "microsoft") {
     setError("");
@@ -20,8 +18,7 @@ export default function LoginPage() {
       : signInWithMicrosoft;
     fn().catch((e: unknown) => {
       setError(e instanceof Error ? e.message : "Login failed. Please try again.");
-      setLoading(null);
-    });
+    }).finally(() => setLoading(null));
   }
 
   return (
@@ -123,9 +120,9 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {displayError && (
+            {error && (
               <div className="mt-4 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                <p className="text-xs text-red-600 dark:text-red-400">{displayError}</p>
+                <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
               </div>
             )}
 
