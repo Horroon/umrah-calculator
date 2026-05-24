@@ -2,7 +2,7 @@
 
 import React from "react";
 import type { CalculatorState, CalculationResult, Currency, Hotel } from "@/types";
-import { getHotelById, convertFromPKR, formatCurrency } from "@/lib/calculator";
+import { getHotelById, getHotelPrice, convertFromPKR, formatCurrency } from "@/lib/calculator";
 import { PACKAGE_PRESETS } from "@/data/packages";
 import Logo from "@/components/Logo";
 
@@ -103,16 +103,16 @@ export default function PrintLayout({ state, result, currency, hotels, customRat
                 <table className="w-full text-xs text-gray-600">
                   <tbody>
                     <tr><td className="pr-3 py-0.5 text-gray-400">Distance</td><td>{makkahHotel.distanceLabel}</td></tr>
-                    <tr><td className="pr-3 py-0.5 text-gray-400">Sharing</td><td>{makkahHotel.sharingType}</td></tr>
+                    <tr><td className="pr-3 py-0.5 text-gray-400">Sharing</td><td>{state.makkahSharingType}</td></tr>
                     <tr><td className="pr-3 py-0.5 text-gray-400">Duration</td><td>{state.nightsMakkah} nights</td></tr>
                     <tr>
                       <td className="pr-3 py-0.5 text-gray-400">Shuttle</td>
-                      <td>{state.shuttleMakkah ? "✓ Included" : "✗ Not included"}</td>
+                      <td>{state.shuttleMakkah && makkahHotel.shuttleSurcharge > 0 ? "✓ Included" : "✗ Not included"}</td>
                     </tr>
                     <tr>
                       <td className="pr-3 py-0.5 text-gray-400">Rate/night</td>
                       <td className="font-medium">
-                        {fmtPKR(state.shuttleMakkah ? makkahHotel.priceWithShuttle : makkahHotel.priceWithoutShuttle)}
+                        {fmtPKR(getHotelPrice(makkahHotel, state.makkahSharingType, state.shuttleMakkah))}
                         <span className="text-gray-400 font-normal"> /person</span>
                       </td>
                     </tr>
@@ -134,16 +134,16 @@ export default function PrintLayout({ state, result, currency, hotels, customRat
                 <table className="w-full text-xs text-gray-600">
                   <tbody>
                     <tr><td className="pr-3 py-0.5 text-gray-400">Distance</td><td>{madinahHotel.distanceLabel}</td></tr>
-                    <tr><td className="pr-3 py-0.5 text-gray-400">Sharing</td><td>{madinahHotel.sharingType}</td></tr>
+                    <tr><td className="pr-3 py-0.5 text-gray-400">Sharing</td><td>{state.madinahSharingType}</td></tr>
                     <tr><td className="pr-3 py-0.5 text-gray-400">Duration</td><td>{state.nightsMadinah} nights</td></tr>
                     <tr>
                       <td className="pr-3 py-0.5 text-gray-400">Shuttle</td>
-                      <td>{state.shuttleMadinah ? "✓ Included" : "✗ Not included"}</td>
+                      <td>{state.shuttleMadinah && madinahHotel.shuttleSurcharge > 0 ? "✓ Included" : "✗ Not included"}</td>
                     </tr>
                     <tr>
                       <td className="pr-3 py-0.5 text-gray-400">Rate/night</td>
                       <td className="font-medium">
-                        {fmtPKR(state.shuttleMadinah ? madinahHotel.priceWithShuttle : madinahHotel.priceWithoutShuttle)}
+                        {fmtPKR(getHotelPrice(madinahHotel, state.madinahSharingType, state.shuttleMadinah))}
                         <span className="text-gray-400 font-normal"> /person</span>
                       </td>
                     </tr>
