@@ -14,7 +14,7 @@ interface Props {
 interface HotelForm {
   name: string;
   city: HotelCity;
-  stars: 3 | 4 | 5;
+  stars: 1 | 2 | 3 | 4 | 5;
   distanceLabel: string;
   distanceMeters: number;
   priceDouble: number;
@@ -228,8 +228,8 @@ export default function HotelManager({ hotels, onClose }: Props) {
               {/* Stars */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Star Rating *</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {([3, 4, 5] as const).map(s => (
+                <div className="grid grid-cols-5 gap-2">
+                  {([1, 2, 3, 4, 5] as const).map(s => (
                     <button key={s} onClick={() => setF("stars", s)}
                       className={`py-2.5 text-sm font-medium rounded-xl border transition-colors
                         ${form.stars === s

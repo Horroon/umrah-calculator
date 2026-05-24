@@ -15,7 +15,7 @@ export interface Hotel {
   userId?: string;
   name: string;
   city: HotelCity;
-  stars: 3 | 4 | 5;
+  stars: 1 | 2 | 3 | 4 | 5;
   distanceLabel: string;
   distanceMeters: number;
   priceDouble: number;
