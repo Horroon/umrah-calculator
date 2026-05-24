@@ -40,6 +40,12 @@ export interface PackagePreset {
   ziyaratFee: number;
 }
 
+export interface VisaTier {
+  id: string;
+  minPax: number;
+  costPKR: number;
+}
+
 export interface CalculatorState {
   departureCity: string;
   flightClass: FlightClass;
@@ -63,6 +69,7 @@ export interface CalculatorState {
   infantCharges: number;
   activePreset: PackageTier | null;
   customRates: Partial<Record<Currency, number>>;
+  visaTiers: VisaTier[];
 }
 
 export interface BreakdownItem {

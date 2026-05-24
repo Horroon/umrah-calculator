@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import type { PackageTier, Currency, CalculatorState, Hotel, SharingType } from "@/types";
+import type { PackageTier, Currency, CalculatorState, Hotel, SharingType, VisaTier } from "@/types";
 import { PACKAGE_PRESETS, FLIGHT_OPTIONS, CURRENCIES } from "@/data/packages";
 import { calculate } from "@/lib/calculator";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,7 +10,6 @@ import CurrencySelector from "@/components/CurrencySelector";
 import PriceSummary from "@/components/PriceSummary";
 import Logo from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
-import TravellerInput from "@/components/TravellerInput";
 import HotelPicker from "@/components/HotelPicker";
 import FeeInputs from "@/components/FeeInputs";
 import PrintLayout from "@/components/PrintLayout";
@@ -43,6 +42,7 @@ const DEFAULT_STATE: CalculatorState = {
   currency:           "PKR",
   activePreset:       "silver",
   customRates:        {},
+  visaTiers:          [{ id: "t1", minPax: 1, costPKR: SILVER.visaFee }],
 };
 
 const VALID_SHARING: SharingType[] = ["DUBL", "TRPL", "QUAD", "SHARING"];
@@ -107,6 +107,16 @@ function stateToParams(s: CalculatorState): string {
   return p.toString();
 }
 
+function computeActiveTier(tiers: VisaTier[], totalPax: number): VisaTier | null {
+  if (tiers.length === 0) return null;
+  const sorted = [...tiers].sort((a, b) => b.minPax - a.minPax);
+  return sorted.find(t => t.minPax <= totalPax) ?? sorted[sorted.length - 1];
+}
+
+function computeVisaFee(tiers: VisaTier[], totalPax: number): number {
+  return computeActiveTier(tiers, totalPax)?.costPKR ?? 0;
+}
+
 function SectionCard({ title, number, children, className = "" }: {
   title: string; number?: string; children: React.ReactNode; className?: string;
 }) {
@@ -151,8 +161,32 @@ export default function Home() {
     }));
   }, [hotels]);
 
+  // Keep visaFee in sync with tiers and pax count
+  useEffect(() => {
+    const fee = computeVisaFee(state.visaTiers, state.numAdults + state.numInfants);
+    if (fee !== state.visaFee) setState(prev => ({ ...prev, visaFee: fee }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.numAdults, state.numInfants, state.visaTiers]);
+
   function setField<K extends keyof CalculatorState>(key: K, value: CalculatorState[K]) {
     setState(prev => ({ ...prev, [key]: value, activePreset: null }));
+  }
+
+  function addTier() {
+    const next: VisaTier = { id: Date.now().toString(), minPax: (state.numAdults + state.numInfants) + 1, costPKR: 0 };
+    setField("visaTiers", [...state.visaTiers, next]);
+  }
+
+  function updateTier(id: string, field: "minPax" | "costPKR", value: number) {
+    setState(prev => ({
+      ...prev,
+      activePreset: null,
+      visaTiers: prev.visaTiers.map(t => t.id === id ? { ...t, [field]: value } : t),
+    }));
+  }
+
+  function deleteTier(id: string) {
+    setField("visaTiers", state.visaTiers.filter(t => t.id !== id));
   }
 
   function applyPreset(tier: PackageTier) {
@@ -252,27 +286,10 @@ export default function Home() {
 
         {/* Quick Start */}
         <div className="no-print bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5 shadow-sm">
-          <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Quick Start</h2>
+          <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">Quick Start</h2>
 
-          {/* Package presets */}
-          <div className="flex items-center gap-2 flex-wrap mb-4 pb-4 border-b border-gray-100 dark:border-gray-700/60">
-            <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">Package:</span>
-            {PACKAGE_PRESETS.map(p => (
-              <button key={p.tier} onClick={() => applyPreset(p.tier)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all
-                  ${state.activePreset === p.tier
-                    ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-                    : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-emerald-300 dark:hover:border-emerald-700"
-                  }`}>
-                <span className={`w-2 h-2 rounded-full bg-gradient-to-br ${p.color}`} />
-                {p.label}
-                <span className="hidden sm:inline font-normal text-gray-400 dark:text-gray-500">· {p.description}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Key inputs */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-5 gap-y-4">
+          {/* Travellers + Exchange Rate */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-5 gap-y-4 mb-5 pb-5 border-b border-gray-100 dark:border-gray-700/60">
 
             {/* Adults */}
             <div>
@@ -308,22 +325,11 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Visa fee */}
-            <div>
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">Visa Fee <span className="font-normal text-gray-400">(per person)</span></label>
-              <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700 focus-within:ring-2 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700">
-                <span className="px-2 text-sm text-gray-400 dark:text-gray-500 shrink-0">₨</span>
-                <input type="number" min={0} step={1000} value={state.visaFee}
-                  onChange={e => setField("visaFee", Math.max(0, parseInt(e.target.value) || 0))}
-                  className="flex-1 py-1.5 pr-2 text-sm text-gray-800 dark:text-gray-100 bg-transparent focus:outline-none min-w-0" />
-              </div>
-            </div>
-
             {/* Exchange rate */}
             <div>
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">
                 Exchange Rate
-                {state.currency === "PKR" && <span className="ml-1 font-normal text-gray-400">(select currency)</span>}
+                {state.currency === "PKR" && <span className="ml-1 font-normal text-gray-400">(select currency above)</span>}
               </label>
               {state.currency !== "PKR" && currentPkrPerForeign !== null ? (
                 <div className="flex items-center gap-1.5">
@@ -343,6 +349,59 @@ export default function Home() {
                 <div className="text-xs text-gray-300 dark:text-gray-600 py-2">— PKR selected</div>
               )}
             </div>
+          </div>
+
+          {/* Visa cost tiers */}
+          <div>
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2.5">Visa Cost by Group Size</div>
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-[88px_1fr_28px] gap-2 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide px-1 mb-1">
+                <span>Min Pax</span>
+                <span>Per Person (₨)</span>
+                <span />
+              </div>
+              {[...state.visaTiers]
+                .sort((a, b) => a.minPax - b.minPax)
+                .map(tier => {
+                  const isActive = tier.id === computeActiveTier(state.visaTiers, state.numAdults + state.numInfants)?.id;
+                  return (
+                    <div key={tier.id}
+                      className={`grid grid-cols-[88px_1fr_28px] gap-2 items-center rounded-lg px-2 py-1.5 transition-colors
+                        ${isActive
+                          ? "bg-emerald-50 dark:bg-emerald-900/20 ring-1 ring-emerald-300 dark:ring-emerald-700"
+                          : "bg-gray-50 dark:bg-gray-700/50"}`}>
+                      <div className="flex items-center gap-1">
+                        <input type="number" min={1} max={50} value={tier.minPax}
+                          onChange={e => updateTier(tier.id, "minPax", Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-11 text-sm font-semibold text-center bg-transparent focus:outline-none text-gray-800 dark:text-gray-100" />
+                        <span className="text-xs text-gray-400 dark:text-gray-500">pax+</span>
+                      </div>
+                      <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-800 focus-within:ring-1 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700">
+                        <span className="pl-2 text-xs text-gray-400 dark:text-gray-500">₨</span>
+                        <input type="number" min={0} step={1000} value={tier.costPKR}
+                          onChange={e => updateTier(tier.id, "costPKR", Math.max(0, parseInt(e.target.value) || 0))}
+                          className="flex-1 px-1.5 py-1.5 text-sm bg-transparent focus:outline-none text-gray-800 dark:text-gray-100 min-w-0" />
+                      </div>
+                      <button onClick={() => deleteTier(tier.id)} disabled={state.visaTiers.length <= 1}
+                        className="w-7 h-7 rounded-lg text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30 flex items-center justify-center transition-colors text-base leading-none">
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+              <button onClick={addTier}
+                className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline mt-0.5 ml-1">
+                <Plus size={11} /> Add tier
+              </button>
+            </div>
+            {(() => {
+              const active = computeActiveTier(state.visaTiers, state.numAdults + state.numInfants);
+              return active ? (
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
+                  {state.numAdults + state.numInfants} pax → ₨{active.costPKR.toLocaleString()} per person
+                </p>
+              ) : null;
+            })()}
           </div>
         </div>
 
@@ -390,9 +449,6 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <TravellerInput numAdults={state.numAdults} numInfants={state.numInfants}
-              onAdultsChange={n => setField("numAdults", n)}
-              onInfantsChange={n => setField("numInfants", n)} />
           </div>
         </SectionCard>
 
@@ -425,7 +481,7 @@ export default function Home() {
           <FeeInputs
             nightsMakkah={state.nightsMakkah} nightsMadinah={state.nightsMadinah}
             flightClass={state.flightClass}
-            visaFee={state.visaFee} serviceFee={state.serviceFee}
+            serviceFee={state.serviceFee}
             insuranceFee={state.insuranceFee} ziyaratFee={state.ziyaratFee}
             infantCharges={state.infantCharges}
             currency={state.currency}
@@ -433,7 +489,6 @@ export default function Home() {
             onNightsMakkahChange={n => setField("nightsMakkah", n)}
             onNightsMadinahChange={n => setField("nightsMadinah", n)}
             onFlightClassChange={c => setField("flightClass", c)}
-            onVisaChange={v => setField("visaFee", v)}
             onServiceChange={v => setField("serviceFee", v)}
             onInsuranceChange={v => setField("insuranceFee", v)}
             onZiyaratChange={v => setField("ziyaratFee", v)}

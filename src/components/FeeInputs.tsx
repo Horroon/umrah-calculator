@@ -8,7 +8,6 @@ interface Props {
   nightsMakkah: number;
   nightsMadinah: number;
   flightClass: FlightClass;
-  visaFee: number;
   serviceFee: number;
   insuranceFee: number;
   ziyaratFee: number;
@@ -18,7 +17,6 @@ interface Props {
   onNightsMakkahChange: (n: number) => void;
   onNightsMadinahChange: (n: number) => void;
   onFlightClassChange: (c: FlightClass) => void;
-  onVisaChange: (v: number) => void;
   onServiceChange: (v: number) => void;
   onInsuranceChange: (v: number) => void;
   onZiyaratChange: (v: number) => void;
@@ -77,10 +75,10 @@ function FeeField({ label, hint, value, onChange }: {
 
 export default function FeeInputs({
   nightsMakkah, nightsMadinah, flightClass,
-  visaFee, serviceFee, insuranceFee, ziyaratFee, infantCharges,
+  serviceFee, insuranceFee, ziyaratFee, infantCharges,
   currency, customRate,
   onNightsMakkahChange, onNightsMadinahChange, onFlightClassChange,
-  onVisaChange, onServiceChange, onInsuranceChange, onZiyaratChange,
+  onServiceChange, onInsuranceChange, onZiyaratChange,
   onInfantChargesChange, onRateChange,
 }: Props) {
   const [customMode, setCustomMode] = useState(false);
@@ -166,7 +164,6 @@ export default function FeeInputs({
 
       {/* Fee inputs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <FeeField label="Visa Fee" hint="(per person)" value={visaFee} onChange={onVisaChange} />
         <FeeField label="Service & Handling" value={serviceFee} onChange={onServiceChange} />
         <FeeField label="Travel Insurance" hint="(0 = none)" value={insuranceFee} onChange={onInsuranceChange} />
         <FeeField label="Ziyarat & Transport" hint="(0 = none)" value={ziyaratFee} onChange={onZiyaratChange} />
