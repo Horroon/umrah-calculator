@@ -25,11 +25,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [redirectError, setRedirectError] = useState("");
 
   useEffect(() => {
-    // Pick up the result (or error) after returning from the provider redirect.
-    getRedirectResult(firebaseAuth()).catch((e: unknown) => {
-      setRedirectError(e instanceof Error ? e.message : "Sign-in failed. Please try again.");
+    const auth = firebaseAuth();
+
+    // Process any pending redirect result first.
+    // We must not call setLoading(false) until this settles — otherwise onAuthStateChanged
+    // fires with null before the redirect user is available, flashing the login page.
+    let redirectSettled = false;
+    const redirectDone = getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) setUser(result.user);
+      })
+      .catch((e: unknown) => {
+        setRedirectError(e instanceof Error ? e.message : "Sign-in failed. Please try again.");
+      })
+      .finally(() => { redirectSettled = true; });
+
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (!redirectSettled) {
+        // Defer until redirect result is known to avoid flashing the login page
+        redirectDone.then(() => { setUser(u); setLoading(false); });
+      } else {
+        setUser(u);
+        setLoading(false);
+      }
     });
-    const unsub = onAuthStateChanged(firebaseAuth(), (u) => { setUser(u); setLoading(false); });
+
     return unsub;
   }, []);
 
