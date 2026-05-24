@@ -1,65 +1,146 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useMemo } from "react";
+import type { PackageTier, Currency } from "@/types";
+import { PACKAGES, FLIGHT_OPTIONS } from "@/data/packages";
+import { calculate } from "@/lib/calculator";
+import PackageCard from "@/components/PackageCard";
+import CurrencySelector from "@/components/CurrencySelector";
+import PriceSummary from "@/components/PriceSummary";
+import { MapPin, Users, Moon } from "lucide-react";
 
 export default function Home() {
+  const [selectedTier, setSelectedTier] = useState<PackageTier>("silver");
+  const [departureCity, setDepartureCity] = useState(FLIGHT_OPTIONS[0].city);
+  const [numPersons, setNumPersons] = useState(2);
+  const [currency, setCurrency] = useState<Currency>("PKR");
+
+  const result = useMemo(
+    () => calculate(selectedTier, departureCity, numPersons),
+    [selectedTier, departureCity, numPersons]
+  );
+
+  const selectedPkg = PACKAGES.find((p) => p.tier === selectedTier)!;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-xl font-bold text-emerald-800">Umrah Package Calculator</h1>
+            <p className="text-xs text-gray-400">Estimate your Umrah journey cost</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 hidden sm:block">Display in:</span>
+            <CurrencySelector value={currency} onChange={setCurrency} />
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </header>
+
+      <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+
+        {/* Package Selection */}
+        <section>
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            1. Choose Your Package
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {PACKAGES.map((pkg) => (
+              <PackageCard
+                key={pkg.tier}
+                pkg={pkg}
+                selected={selectedTier === pkg.tier}
+                onSelect={() => setSelectedTier(pkg.tier)}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Trip Details */}
+        <section className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-5">
+            2. Trip Details
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {/* Departure City */}
+            <div>
+              <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
+                <MapPin size={14} className="text-emerald-600" />
+                Departure City
+              </label>
+              <select
+                value={departureCity}
+                onChange={(e) => setDepartureCity(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 bg-gray-50"
+              >
+                {FLIGHT_OPTIONS.map((f) => (
+                  <option key={f.city} value={f.city}>{f.city}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Number of Persons */}
+            <div>
+              <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
+                <Users size={14} className="text-emerald-600" />
+                Number of Persons
+              </label>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setNumPersons((n) => Math.max(1, n - 1))}
+                  className="w-9 h-9 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 font-bold hover:bg-gray-100 transition-colors"
+                >
+                  −
+                </button>
+                <span className="text-xl font-bold text-gray-800 w-8 text-center">{numPersons}</span>
+                <button
+                  onClick={() => setNumPersons((n) => Math.min(50, n + 1))}
+                  className="w-9 h-9 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 font-bold hover:bg-gray-100 transition-colors"
+                >
+                  +
+                </button>
+              </div>
+              {numPersons >= 5 && (
+                <p className="text-xs text-emerald-600 mt-1.5 font-medium">
+                  Group discount applied!
+                </p>
+              )}
+            </div>
+
+            {/* Duration Summary */}
+            <div>
+              <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
+                <Moon size={14} className="text-emerald-600" />
+                Total Duration
+              </label>
+              <div className="bg-emerald-50 rounded-xl px-4 py-2.5">
+                <div className="text-lg font-bold text-emerald-700">
+                  {selectedPkg.nightsMakkah + selectedPkg.nightsMadinah} Nights
+                </div>
+                <div className="text-xs text-emerald-600">
+                  {selectedPkg.nightsMakkah}N Makkah · {selectedPkg.nightsMadinah}N Madinah
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Price Summary */}
+        <section>
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            3. Your Estimate
+          </h2>
+          <PriceSummary result={result} currency={currency} />
+        </section>
+
+        {/* Disclaimer */}
+        <footer className="text-center text-xs text-gray-400 pb-8">
+          <p>Prices are indicative estimates based on current market rates.</p>
+          <p className="mt-1">Flight fares displayed in PKR · Conversion rates are approximate.</p>
+        </footer>
+      </div>
+    </main>
   );
 }
