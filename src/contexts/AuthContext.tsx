@@ -27,10 +27,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const auth = firebaseAuth();
 
-    // Process any pending redirect result first.
-    // We must not call setLoading(false) until this settles — otherwise onAuthStateChanged
-    // fires with null before the redirect user is available, flashing the login page.
-    let redirectSettled = false;
+    // Must be called on every mount to complete any pending redirect sign-in.
+    // We capture the promise so onAuthStateChanged can wait for it before resolving state.
+    let redirectProcessing = true;
     const redirectDone = getRedirectResult(auth)
       .then((result) => {
         if (result?.user) setUser(result.user);
@@ -38,12 +37,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch((e: unknown) => {
         setRedirectError(e instanceof Error ? e.message : "Sign-in failed. Please try again.");
       })
-      .finally(() => { redirectSettled = true; });
+      .finally(() => { redirectProcessing = false; });
 
     const unsub = onAuthStateChanged(auth, (u) => {
-      if (!redirectSettled) {
-        // Defer until redirect result is known to avoid flashing the login page
-        redirectDone.then(() => { setUser(u); setLoading(false); });
+      if (redirectProcessing) {
+        // Redirect not yet resolved — defer and use auth.currentUser (not the stale `u`)
+        // to avoid overwriting the redirect user with an earlier null snapshot.
+        redirectDone.then(() => {
+          setUser(auth.currentUser);
+          setLoading(false);
+        });
       } else {
         setUser(u);
         setLoading(false);
