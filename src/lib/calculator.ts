@@ -41,6 +41,14 @@ export function formatCurrency(amount: number, currency: Currency): string {
   return `${c.symbol}${formatted}`;
 }
 
+function hotelRateToPKR(rate: number, currency: Currency, customRates: Partial<Record<string, number>>): number {
+  if (currency === "PKR") return rate;
+  const c = CURRENCIES.find(c => c.code === currency);
+  if (!c) return rate;
+  const pkrPerUnit = customRates[currency] ?? Math.round(1 / c.rate);
+  return Math.round(rate * pkrPerUnit);
+}
+
 export function calculate(state: CalculatorState, hotels: Hotel[]): CalculationResult {
   const {
     departureCity, flightClass, economyFare, businessFare,
@@ -49,13 +57,14 @@ export function calculate(state: CalculatorState, hotels: Hotel[]): CalculationR
     madinahHotelId, madinahSharingType, nightsMadinah,
     visaFee, serviceFee, insuranceFee, ziyaratFee,
     infantCharges = 0,
+    currency, customRates,
   } = state;
 
   const flightFare = flightClass === "economy" ? economyFare : businessFare;
   const mHotel = getHotelById(makkahHotelId, hotels);
   const dHotel = getHotelById(madinahHotelId, hotels);
-  const mRate  = mHotel ? getHotelPrice(mHotel, makkahSharingType)  : 0;
-  const dRate  = dHotel ? getHotelPrice(dHotel, madinahSharingType) : 0;
+  const mRate  = mHotel ? hotelRateToPKR(getHotelPrice(mHotel, makkahSharingType),  currency, customRates) : 0;
+  const dRate  = dHotel ? hotelRateToPKR(getHotelPrice(dHotel, madinahSharingType), currency, customRates) : 0;
 
   const makkahLabel  = mHotel
     ? `Hotel Makkah – ${mHotel.name} (${nightsMakkah}N · ${makkahSharingType}${mHotel.shuttle ? " · shuttle ✓" : ""})`
