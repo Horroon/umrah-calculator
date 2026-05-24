@@ -20,13 +20,14 @@ function getApp(): FirebaseApp {
   return _app;
 }
 
-// Lazy getters — never called during SSR, only inside useEffect / event handlers
 export function firebaseAuth(): Auth {
+  if (typeof window === "undefined") return null as unknown as Auth;
   if (!_auth) _auth = _getAuth(getApp());
   return _auth;
 }
 
 export function firebaseDb(): Firestore {
+  if (typeof window === "undefined") return null as unknown as Firestore;
   if (!_db) _db = _getFirestore(getApp());
   return _db;
 }
