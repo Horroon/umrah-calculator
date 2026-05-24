@@ -39,7 +39,6 @@ export default function HotelPicker({
   hotels, selectedHotelId, selectedSharingType, shuttleEnabled,
   onHotelChange, onSharingTypeChange, onShuttleChange, onManageHotels,
 }: Props) {
-  const [filterShuttle, setFilterShuttle] = useState(false);
   const [filterMaxDist, setFilterMaxDist] = useState<number | null>(null);
   const [showFilters, setShowFilters]     = useState(false);
 
@@ -48,12 +47,15 @@ export default function HotelPicker({
     return [...new Set(hotels.map(h => h.distanceMeters))].sort((a, b) => a - b);
   }, [hotels]);
 
+  // Filter by shuttle and distance; sort ascending by distance
   const filtered = useMemo(() => {
     return hotels
-      .filter(h => !filterShuttle || h.shuttleSurcharge > 0)
+      .filter(h => !shuttleEnabled || h.shuttleSurcharge > 0)
       .filter(h => filterMaxDist === null || h.distanceMeters <= filterMaxDist)
       .sort((a, b) => a.distanceMeters - b.distanceMeters);
-  }, [hotels, filterShuttle, filterMaxDist]);
+  }, [hotels, shuttleEnabled, filterMaxDist]);
+
+  const hasActiveFilter = shuttleEnabled || filterMaxDist !== null;
 
   if (hotels.length === 0) {
     return (
@@ -70,39 +72,35 @@ export default function HotelPicker({
   return (
     <div className="space-y-3">
 
-      {/* Controls: shuttle toggle + filter */}
-      <div className="flex items-center justify-between gap-2">
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <div onClick={() => onShuttleChange(!shuttleEnabled)}
-            className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${shuttleEnabled ? "bg-emerald-500" : "bg-gray-200 dark:bg-gray-600"}`}>
-            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${shuttleEnabled ? "translate-x-4" : ""}`} />
-          </div>
-          <Bus size={13} className={shuttleEnabled ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400"} />
-          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-            {shuttleEnabled ? "Shuttle on" : "No shuttle"}
-          </span>
-        </label>
-
+      {/* Filter button */}
+      <div className="flex items-center justify-end">
         <button onClick={() => setShowFilters(f => !f)}
           className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors
-            ${showFilters || filterShuttle || filterMaxDist !== null
+            ${showFilters || hasActiveFilter
               ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
               : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300"}`}>
           <SlidersHorizontal size={12} />
-          Filter{(filterShuttle || filterMaxDist !== null) ? " ●" : ""}
+          Filter{hasActiveFilter ? " ●" : ""}
         </button>
       </div>
 
       {/* Filter panel */}
       {showFilters && (
         <div className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-3 space-y-3 border border-gray-200 dark:border-gray-700">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={filterShuttle} onChange={e => setFilterShuttle(e.target.checked)}
-              className="w-3.5 h-3.5 accent-emerald-600 rounded" />
-            <Bus size={12} className="text-gray-400" />
-            <span className="text-xs text-gray-600 dark:text-gray-400">Shuttle service available only</span>
-          </label>
 
+          {/* Shuttle toggle */}
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <Bus size={12} className={shuttleEnabled ? "text-emerald-500" : "text-gray-400"} />
+              <span className="text-xs text-gray-600 dark:text-gray-400">Include shuttle service</span>
+            </label>
+            <div onClick={() => onShuttleChange(!shuttleEnabled)}
+              className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${shuttleEnabled ? "bg-emerald-500" : "bg-gray-200 dark:bg-gray-600"}`}>
+              <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${shuttleEnabled ? "translate-x-4" : ""}`} />
+            </div>
+          </div>
+
+          {/* Distance filter */}
           {distanceOptions.length > 1 && (
             <div>
               <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1">
@@ -131,7 +129,7 @@ export default function HotelPicker({
         </div>
       )}
 
-      {/* Hotel list */}
+      {/* Hotel list — sorted ascending by distance */}
       <div className="space-y-2.5 max-h-[480px] overflow-y-auto pr-1">
         {filtered.length === 0 && (
           <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No hotels match the current filters.</p>
@@ -145,7 +143,6 @@ export default function HotelPicker({
                   ? "border-emerald-500 bg-emerald-50/60 dark:bg-emerald-900/20"
                   : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
               }`}>
-              {/* Hotel header */}
               <button className="w-full text-left px-3 pt-3 pb-2" onClick={() => onHotelChange(hotel.id)}>
                 <div className="flex items-start gap-2">
                   {isSelected && <Check size={13} className="text-emerald-500 shrink-0 mt-0.5" />}

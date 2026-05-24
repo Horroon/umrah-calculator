@@ -60,6 +60,7 @@ export interface CalculatorState {
   insuranceFee: number;
   ziyaratFee: number;
   currency: Currency;
+  infantCharges: number;
   activePreset: PackageTier | null;
   customRates: Partial<Record<Currency, number>>;
 }

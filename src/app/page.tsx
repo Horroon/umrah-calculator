@@ -40,6 +40,7 @@ const DEFAULT_STATE: CalculatorState = {
   serviceFee:         SILVER.serviceFee,
   insuranceFee:       SILVER.insuranceFee,
   ziyaratFee:         SILVER.ziyaratFee,
+  infantCharges:      0,
   currency:           "PKR",
   activePreset:       "silver",
   customRates:        {},
@@ -71,7 +72,8 @@ function parseState(p: URLSearchParams): CalculatorState {
   const vf  = parseInt(p.get("vf")  ?? ""); if (!isNaN(vf)  && vf  >= 0) s.visaFee      = vf;
   const sf  = parseInt(p.get("sf")  ?? ""); if (!isNaN(sf)  && sf  >= 0) s.serviceFee   = sf;
   const inf = parseInt(p.get("inf") ?? ""); if (!isNaN(inf) && inf >= 0) s.insuranceFee = inf;
-  const zf  = parseInt(p.get("zf")  ?? ""); if (!isNaN(zf)  && zf  >= 0) s.ziyaratFee  = zf;
+  const zf  = parseInt(p.get("zf")   ?? ""); if (!isNaN(zf)   && zf   >= 0) s.ziyaratFee     = zf;
+  const ic  = parseInt(p.get("ichrg") ?? ""); if (!isNaN(ic)   && ic   >= 0) s.infantCharges   = ic;
   const cur = p.get("cur") as Currency;
   if (cur && CURRENCIES.some(c => c.code === cur)) s.currency = cur;
   const pre = p.get("pre") as PackageTier;
@@ -99,7 +101,8 @@ function stateToParams(s: CalculatorState): string {
   p.set("vf",  String(s.visaFee));
   p.set("sf",  String(s.serviceFee));
   p.set("inf", String(s.insuranceFee));
-  p.set("zf",  String(s.ziyaratFee));
+  p.set("zf",   String(s.ziyaratFee));
+  p.set("ichrg", String(s.infantCharges));
   p.set("cur", s.currency);
   if (s.activePreset) p.set("pre", s.activePreset);
   return p.toString();
@@ -213,24 +216,6 @@ export default function Home() {
 
           {/* Right controls */}
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            {/* Exchange rate input */}
-            {state.currency !== "PKR" && currentPkrPerForeign !== null && (
-              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                <span className="hidden sm:inline">1 {state.currency} =</span>
-                <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-800 focus-within:ring-1 focus-within:ring-emerald-400">
-                  <input type="number" min={1} step={1} value={currentPkrPerForeign}
-                    onChange={e => {
-                      const val = parseInt(e.target.value);
-                      if (!isNaN(val) && val > 0)
-                        setState(prev => ({ ...prev, customRates: { ...prev.customRates, [prev.currency]: val } }));
-                    }}
-                    className="w-20 px-2 py-1.5 text-xs text-gray-800 dark:text-gray-200 bg-transparent focus:outline-none"
-                  />
-                  <span className="pr-2 text-gray-400 text-xs">PKR</span>
-                </div>
-              </div>
-            )}
-
             <CurrencySelector value={state.currency} onChange={c => setState(prev => ({ ...prev, currency: c }))} />
 
             <button onClick={() => setShowHotelManager(true)}
@@ -352,13 +337,19 @@ export default function Home() {
             flightClass={state.flightClass}
             visaFee={state.visaFee} serviceFee={state.serviceFee}
             insuranceFee={state.insuranceFee} ziyaratFee={state.ziyaratFee}
+            infantCharges={state.infantCharges}
+            currency={state.currency}
+            customRate={currentPkrPerForeign}
             onNightsMakkahChange={n => setField("nightsMakkah", n)}
             onNightsMadinahChange={n => setField("nightsMadinah", n)}
             onFlightClassChange={c => setField("flightClass", c)}
             onVisaChange={v => setField("visaFee", v)}
             onServiceChange={v => setField("serviceFee", v)}
             onInsuranceChange={v => setField("insuranceFee", v)}
-            onZiyaratChange={v => setField("ziyaratFee", v)} />
+            onZiyaratChange={v => setField("ziyaratFee", v)}
+            onInfantChargesChange={v => setField("infantCharges", v)}
+            onRateChange={rate => setState(prev => ({ ...prev, customRates: { ...prev.customRates, [prev.currency]: rate } }))} />
+            
         </SectionCard>
 
         {/* 5. Estimate */}

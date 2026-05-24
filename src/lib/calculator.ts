@@ -50,6 +50,7 @@ export function calculate(state: CalculatorState, hotels: Hotel[]): CalculationR
     makkahHotelId, makkahSharingType, shuttleMakkah, nightsMakkah,
     madinahHotelId, madinahSharingType, shuttleMadinah, nightsMadinah,
     visaFee, serviceFee, insuranceFee, ziyaratFee,
+    infantCharges = 0,
   } = state;
 
   const flightFare = flightClass === "economy" ? economyFare : businessFare;
@@ -103,6 +104,11 @@ export function calculate(state: CalculatorState, hotels: Hotel[]): CalculationR
       label: "Ziyarat & Local Transport",
       adultAmountPKR:  ziyaratFee * numAdults,
       infantAmountPKR: 0,
+    }] : []),
+    ...(infantCharges > 0 && numInfants > 0 ? [{
+      label: "Infant Additional Charges",
+      adultAmountPKR:  0,
+      infantAmountPKR: infantCharges * numInfants,
     }] : []),
   ];
 

@@ -274,12 +274,13 @@ export default function PrintLayout({ state, result, currency, hotels, customRat
         <div className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-2">
           Applied Fees (per adult)
         </div>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-5 gap-3">
           {[
-            { label: "Umrah Visa", value: state.visaFee },
+            { label: "Umrah Visa",  value: state.visaFee },
             { label: "Service Fee", value: state.serviceFee },
             { label: "Insurance",   value: state.insuranceFee },
             { label: "Ziyarat",     value: state.ziyaratFee },
+            { label: "Infant Fee",  value: state.infantCharges ?? 0 },
           ].map(({ label, value }) => (
             <div key={label} className="border border-gray-200 rounded-lg p-3 text-center">
               <div className="text-xs text-gray-400 mb-1">{label}</div>
