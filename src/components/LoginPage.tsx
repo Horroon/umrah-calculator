@@ -70,7 +70,7 @@ export default function LoginPage() {
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Plan your sacred journey</p>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 p-8">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 p-8 text-center">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Welcome back</h2>
             <p className="text-gray-500 dark:text-gray-400 text-sm mb-8">
               Sign in to manage your packages and hotels
