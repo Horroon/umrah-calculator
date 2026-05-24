@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { PackageTier, Currency } from "@/types";
-import { PACKAGES, FLIGHT_OPTIONS } from "@/data/packages";
+import { PACKAGES, FLIGHT_OPTIONS, CURRENCIES } from "@/data/packages";
 import { calculate } from "@/lib/calculator";
 import PackageCard from "@/components/PackageCard";
 import CurrencySelector from "@/components/CurrencySelector";
@@ -16,6 +16,29 @@ export default function Home() {
   const [departureCity, setDepartureCity] = useState(FLIGHT_OPTIONS[0].city);
   const [numPersons, setNumPersons] = useState(2);
   const [currency, setCurrency] = useState<Currency>("PKR");
+
+  // Restore state from URL params on first load
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const tier = p.get("tier") as PackageTier;
+    if (tier && ["bronze", "silver", "gold"].includes(tier)) setSelectedTier(tier);
+    const city = p.get("city");
+    if (city && FLIGHT_OPTIONS.some((f) => f.city === city)) setDepartureCity(city);
+    const persons = parseInt(p.get("persons") ?? "", 10);
+    if (!isNaN(persons) && persons >= 1 && persons <= 50) setNumPersons(persons);
+    const cur = p.get("currency") as Currency;
+    if (cur && CURRENCIES.some((c) => c.code === cur)) setCurrency(cur);
+  }, []);
+
+  // Keep URL in sync so it's always shareable
+  useEffect(() => {
+    const p = new URLSearchParams();
+    p.set("tier", selectedTier);
+    p.set("city", departureCity);
+    p.set("persons", String(numPersons));
+    p.set("currency", currency);
+    history.replaceState(null, "", `?${p.toString()}`);
+  }, [selectedTier, departureCity, numPersons, currency]);
 
   const result = useMemo(
     () => calculate(selectedTier, departureCity, numPersons),

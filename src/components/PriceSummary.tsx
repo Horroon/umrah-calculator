@@ -3,8 +3,9 @@
 import type { Currency } from "@/types";
 import type { CalculationResult } from "@/lib/calculator";
 import { convertFromPKR, formatCurrency } from "@/lib/calculator";
-import { Users, Tag, TrendingDown, Wallet, Printer } from "lucide-react";
+import { Users, Tag, TrendingDown, Wallet, Printer, Link, Check } from "lucide-react";
 import Logo from "@/components/Logo";
+import { useState } from "react";
 
 interface Props {
   result: CalculationResult;
@@ -14,6 +15,14 @@ interface Props {
 export default function PriceSummary({ result, currency }: Props) {
   const fmt = (pkr: number) => formatCurrency(convertFromPKR(pkr, currency), currency);
   const fmtPKR = (pkr: number) => formatCurrency(pkr, "PKR");
+  const [copied, setCopied] = useState(false);
+
+  function copyLink() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -39,13 +48,26 @@ export default function PriceSummary({ result, currency }: Props) {
             {result.numPersons} {result.numPersons === 1 ? "person" : "persons"} · Per person prices
           </p>
         </div>
-        <button
-          onClick={() => window.print()}
-          className="no-print shrink-0 flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
-        >
-          <Printer size={14} />
-          <span>Print / PDF</span>
-        </button>
+        <div className="no-print flex items-center gap-2 shrink-0">
+          <button
+            onClick={copyLink}
+            className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer
+              ${copied
+                ? "bg-white/30 text-white"
+                : "bg-white/20 hover:bg-white/30 text-white"
+              }`}
+          >
+            {copied ? <Check size={14} /> : <Link size={14} />}
+            <span className="hidden sm:inline">{copied ? "Copied!" : "Copy Link"}</span>
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+          >
+            <Printer size={14} />
+            <span className="hidden sm:inline">Print / PDF</span>
+          </button>
+        </div>
       </div>
 
       {/* Breakdown rows */}
