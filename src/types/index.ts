@@ -41,6 +41,8 @@ export interface PackagePreset {
 export interface CalculatorState {
   departureCity: string;
   flightClass: FlightClass;
+  economyFare: number;
+  businessFare: number;
   numAdults: number;
   numInfants: number;
   makkahHotelId: string;

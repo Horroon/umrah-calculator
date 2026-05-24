@@ -73,7 +73,10 @@ export default function PrintLayout({ state, result, currency }: Props) {
         <table className="w-full text-sm">
           <tbody>
             <Row label="Departure City"  value={state.departureCity} />
-            <Row label="Flight Class"    value={state.flightClass === "economy" ? "Economy Class" : "Business Class"} />
+            <Row
+              label="Flight Class"
+              value={`${state.flightClass === "economy" ? "Economy" : "Business"} · ${fmtPKR(state.flightClass === "economy" ? state.economyFare : state.businessFare)} per person`}
+            />
             <Row label="Travellers"
               value={`${result.numAdults} Adult${result.numAdults !== 1 ? "s" : ""}${result.numInfants > 0 ? ` · ${result.numInfants} Infant${result.numInfants !== 1 ? "s" : ""} (under 2)` : ""}`}
             />

@@ -29,14 +29,14 @@ export function formatCurrency(amount: number, currency: Currency): string {
 
 export function calculate(state: CalculatorState): CalculationResult {
   const {
-    departureCity, flightClass,
+    departureCity, flightClass, economyFare, businessFare,
     numAdults, numInfants,
     makkahHotelId, shuttleMakkah, nightsMakkah,
     madinahHotelId, shuttleMadinah, nightsMadinah,
     visaFee, serviceFee, insuranceFee, ziyaratFee,
   } = state;
 
-  const flightFare = getFlightFare(departureCity, flightClass);
+  const flightFare = flightClass === "economy" ? economyFare : businessFare;
   const mHotel     = getHotelById(makkahHotelId);
   const dHotel     = getHotelById(madinahHotelId);
   const mRate      = shuttleMakkah   ? mHotel.priceWithShuttle   : mHotel.priceWithoutShuttle;

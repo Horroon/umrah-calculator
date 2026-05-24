@@ -22,6 +22,8 @@ const SILVER = PACKAGE_PRESETS.find((p) => p.tier === "silver")!;
 const DEFAULT_STATE: CalculatorState = {
   departureCity:   FLIGHT_OPTIONS[0].city,
   flightClass:     SILVER.flightClass,
+  economyFare:     FLIGHT_OPTIONS[0].economyFare,
+  businessFare:    FLIGHT_OPTIONS[0].businessFare,
   numAdults:       2,
   numInfants:      0,
   makkahHotelId:   SILVER.makkahHotelId,
@@ -46,6 +48,15 @@ function parseState(p: URLSearchParams): CalculatorState {
 
   const fc = p.get("fc");
   if (fc === "e" || fc === "b") s.flightClass = fc === "e" ? "economy" : "business";
+
+  // Fares: default to city preset, override with URL values if present
+  const cityOption = FLIGHT_OPTIONS.find((f) => f.city === s.departureCity) ?? FLIGHT_OPTIONS[0];
+  s.economyFare  = cityOption.economyFare;
+  s.businessFare = cityOption.businessFare;
+  const ef = parseInt(p.get("ef") ?? "");
+  if (!isNaN(ef) && ef > 0) s.economyFare = ef;
+  const bf = parseInt(p.get("bf") ?? "");
+  if (!isNaN(bf) && bf > 0) s.businessFare = bf;
 
   const a = parseInt(p.get("a") ?? "");
   if (!isNaN(a) && a >= 1 && a <= 50) s.numAdults = a;
@@ -95,6 +106,8 @@ function stateToParams(s: CalculatorState): string {
   const p = new URLSearchParams();
   p.set("city", s.departureCity);
   p.set("fc",   s.flightClass === "economy" ? "e" : "b");
+  p.set("ef",   String(s.economyFare));
+  p.set("bf",   String(s.businessFare));
   p.set("a",    String(s.numAdults));
   p.set("i",    String(s.numInfants));
   p.set("mh",   s.makkahHotelId);
@@ -209,21 +222,69 @@ export default function Home() {
         {/* 1. Flight & Travellers */}
         <SectionCard title="Flight & Travellers" number="1">
           <div className="space-y-5">
-            {/* Departure city */}
-            <div>
-              <label className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <MapPin size={13} className="text-emerald-600 dark:text-emerald-500" />
-                Departure City
-              </label>
-              <select
-                value={state.departureCity}
-                onChange={(e) => setField("departureCity", e.target.value)}
-                className="w-full sm:w-64 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 dark:focus:ring-emerald-700"
-              >
-                {FLIGHT_OPTIONS.map((f) => (
-                  <option key={f.city} value={f.city}>{f.city}</option>
-                ))}
-              </select>
+            {/* Departure city + flight fares */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <MapPin size={13} className="text-emerald-600 dark:text-emerald-500" />
+                  Departure City
+                </label>
+                <select
+                  value={state.departureCity}
+                  onChange={(e) => {
+                    const city = e.target.value;
+                    const preset = FLIGHT_OPTIONS.find((f) => f.city === city) ?? FLIGHT_OPTIONS[0];
+                    setState((prev) => ({
+                      ...prev,
+                      departureCity: city,
+                      economyFare:  preset.economyFare,
+                      businessFare: preset.businessFare,
+                      activePreset: null,
+                    }));
+                  }}
+                  className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 dark:focus:ring-emerald-700"
+                >
+                  {FLIGHT_OPTIONS.map((f) => (
+                    <option key={f.city} value={f.city}>{f.city}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Economy fare */}
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Economy Fare <span className="text-gray-400 font-normal">(PKR, round-trip)</span>
+                </label>
+                <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700 focus-within:ring-2 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700">
+                  <span className="px-2.5 text-sm text-gray-400 dark:text-gray-500 shrink-0">₨</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={5000}
+                    value={state.economyFare}
+                    onChange={(e) => setField("economyFare", Math.max(0, parseInt(e.target.value) || 0))}
+                    className="flex-1 py-2.5 pr-3 text-sm text-gray-800 dark:text-gray-100 bg-transparent focus:outline-none min-w-0"
+                  />
+                </div>
+              </div>
+
+              {/* Business fare */}
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Business Fare <span className="text-gray-400 font-normal">(PKR, round-trip)</span>
+                </label>
+                <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700 focus-within:ring-2 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700">
+                  <span className="px-2.5 text-sm text-gray-400 dark:text-gray-500 shrink-0">₨</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={5000}
+                    value={state.businessFare}
+                    onChange={(e) => setField("businessFare", Math.max(0, parseInt(e.target.value) || 0))}
+                    className="flex-1 py-2.5 pr-3 text-sm text-gray-800 dark:text-gray-100 bg-transparent focus:outline-none min-w-0"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Travellers */}
