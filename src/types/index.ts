@@ -1,7 +1,8 @@
-export type PackageTier = "bronze" | "silver" | "gold";
-export type FlightClass = "economy" | "business";
-export type Currency = "PKR" | "USD" | "GBP" | "SAR" | "AED";
-export type HotelCity = "makkah" | "madinah";
+export type PackageTier   = "bronze" | "silver" | "gold";
+export type FlightClass   = "economy" | "business";
+export type Currency      = "PKR" | "USD" | "GBP" | "SAR" | "AED";
+export type HotelCity     = "makkah" | "madinah";
+export type SharingType   = "SNGL" | "DUBL" | "TRPL" | "QUAD" | "SHARING";
 
 export interface FlightOption {
   city: string;
@@ -11,13 +12,15 @@ export interface FlightOption {
 
 export interface Hotel {
   id: string;
+  userId?: string;
   name: string;
   city: HotelCity;
   stars: 3 | 4 | 5;
-  distanceMeters: number;
   distanceLabel: string;
+  sharingType: SharingType;
   priceWithShuttle: number;
   priceWithoutShuttle: number;
+  createdAt?: unknown;
 }
 
 export interface PackagePreset {
@@ -28,10 +31,6 @@ export interface PackagePreset {
   nightsMakkah: number;
   nightsMadinah: number;
   flightClass: FlightClass;
-  makkahHotelId: string;
-  madinahHotelId: string;
-  shuttleMakkah: boolean;
-  shuttleMadinah: boolean;
   visaFee: number;
   serviceFee: number;
   insuranceFee: number;
@@ -57,6 +56,7 @@ export interface CalculatorState {
   ziyaratFee: number;
   currency: Currency;
   activePreset: PackageTier | null;
+  customRates: Partial<Record<Currency, number>>; // PKR per 1 unit of foreign currency
 }
 
 export interface BreakdownItem {

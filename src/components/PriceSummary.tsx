@@ -9,12 +9,13 @@ import { useState } from "react";
 interface Props {
   result: CalculationResult;
   currency: Currency;
+  customRates?: Partial<Record<string, number>>;
 }
 
-export default function PriceSummary({ result, currency }: Props) {
+export default function PriceSummary({ result, currency, customRates }: Props) {
   const [copied, setCopied] = useState(false);
 
-  const fmt    = (pkr: number) => formatCurrency(convertFromPKR(pkr, currency), currency);
+  const fmt    = (pkr: number) => formatCurrency(convertFromPKR(pkr, currency, customRates), currency);
   const fmtPKR = (pkr: number) => formatCurrency(pkr, "PKR");
 
   function copyLink() {

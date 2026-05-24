@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import type { PackageTier, Currency, CalculatorState } from "@/types";
-import {
-  PACKAGE_PRESETS, FLIGHT_OPTIONS, MAKKAH_HOTELS, MADINAH_HOTELS, CURRENCIES,
-} from "@/data/packages";
+import type { PackageTier, Currency, CalculatorState, Hotel } from "@/types";
+import { PACKAGE_PRESETS, FLIGHT_OPTIONS, CURRENCIES } from "@/data/packages";
 import { calculate } from "@/lib/calculator";
+import { useAuth } from "@/contexts/AuthContext";
+import { subscribeToHotels } from "@/lib/firestore";
 import CurrencySelector from "@/components/CurrencySelector";
 import PriceSummary from "@/components/PriceSummary";
 import Logo from "@/components/Logo";
@@ -15,7 +15,9 @@ import TravellerInput from "@/components/TravellerInput";
 import HotelPicker from "@/components/HotelPicker";
 import FeeInputs from "@/components/FeeInputs";
 import PrintLayout from "@/components/PrintLayout";
-import { MapPin } from "lucide-react";
+import LoginPage from "@/components/LoginPage";
+import HotelManager from "@/components/HotelManager";
+import { MapPin, Settings, LogOut } from "lucide-react";
 
 const SILVER = PACKAGE_PRESETS.find((p) => p.tier === "silver")!;
 
@@ -26,10 +28,10 @@ const DEFAULT_STATE: CalculatorState = {
   businessFare:    FLIGHT_OPTIONS[0].businessFare,
   numAdults:       2,
   numInfants:      0,
-  makkahHotelId:   SILVER.makkahHotelId,
-  shuttleMakkah:   SILVER.shuttleMakkah,
-  madinahHotelId:  SILVER.madinahHotelId,
-  shuttleMadinah:  SILVER.shuttleMadinah,
+  makkahHotelId:   "",
+  shuttleMakkah:   true,
+  madinahHotelId:  "",
+  shuttleMadinah:  true,
   nightsMakkah:    SILVER.nightsMakkah,
   nightsMadinah:   SILVER.nightsMadinah,
   visaFee:         SILVER.visaFee,
@@ -38,18 +40,15 @@ const DEFAULT_STATE: CalculatorState = {
   ziyaratFee:      SILVER.ziyaratFee,
   currency:        "PKR",
   activePreset:    "silver",
+  customRates:     {},
 };
 
 function parseState(p: URLSearchParams): CalculatorState {
   const s = { ...DEFAULT_STATE };
-
   const city = p.get("city");
   if (city && FLIGHT_OPTIONS.some((f) => f.city === city)) s.departureCity = city;
-
   const fc = p.get("fc");
   if (fc === "e" || fc === "b") s.flightClass = fc === "e" ? "economy" : "business";
-
-  // Fares: default to city preset, override with URL values if present
   const cityOption = FLIGHT_OPTIONS.find((f) => f.city === s.departureCity) ?? FLIGHT_OPTIONS[0];
   s.economyFare  = cityOption.economyFare;
   s.businessFare = cityOption.businessFare;
@@ -57,48 +56,33 @@ function parseState(p: URLSearchParams): CalculatorState {
   if (!isNaN(ef) && ef > 0) s.economyFare = ef;
   const bf = parseInt(p.get("bf") ?? "");
   if (!isNaN(bf) && bf > 0) s.businessFare = bf;
-
   const a = parseInt(p.get("a") ?? "");
   if (!isNaN(a) && a >= 1 && a <= 50) s.numAdults = a;
-
   const i = parseInt(p.get("i") ?? "");
   if (!isNaN(i) && i >= 0 && i <= 10) s.numInfants = Math.min(i, s.numAdults);
-
   const mh = p.get("mh");
-  if (mh && MAKKAH_HOTELS.some((h) => h.id === mh)) s.makkahHotelId = mh;
-
+  if (mh) s.makkahHotelId = mh;
   s.shuttleMakkah = p.get("ms") !== "0";
-
   const dh = p.get("dh");
-  if (dh && MADINAH_HOTELS.some((h) => h.id === dh)) s.madinahHotelId = dh;
-
+  if (dh) s.madinahHotelId = dh;
   s.shuttleMadinah = p.get("ds") !== "0";
-
   const nm = parseInt(p.get("nm") ?? "");
   if (!isNaN(nm) && nm >= 1 && nm <= 30) s.nightsMakkah = nm;
-
   const nd = parseInt(p.get("nd") ?? "");
   if (!isNaN(nd) && nd >= 1 && nd <= 20) s.nightsMadinah = nd;
-
   const vf = parseInt(p.get("vf") ?? "");
   if (!isNaN(vf) && vf >= 0) s.visaFee = vf;
-
   const sf = parseInt(p.get("sf") ?? "");
   if (!isNaN(sf) && sf >= 0) s.serviceFee = sf;
-
   const inf = parseInt(p.get("inf") ?? "");
   if (!isNaN(inf) && inf >= 0) s.insuranceFee = inf;
-
   const zf = parseInt(p.get("zf") ?? "");
   if (!isNaN(zf) && zf >= 0) s.ziyaratFee = zf;
-
   const cur = p.get("cur") as Currency;
   if (cur && CURRENCIES.some((c) => c.code === cur)) s.currency = cur;
-
   const pre = p.get("pre") as PackageTier;
   if (pre && ["bronze", "silver", "gold"].includes(pre)) s.activePreset = pre;
   else s.activePreset = null;
-
   return s;
 }
 
@@ -139,7 +123,10 @@ function SectionCard({ title, number, children, className = "" }: {
 }
 
 export default function Home() {
+  const { user, loading, logout } = useAuth();
   const [state, setState] = useState<CalculatorState>(DEFAULT_STATE);
+  const [hotels, setHotels] = useState<Hotel[]>([]);
+  const [showHotelManager, setShowHotelManager] = useState(false);
 
   // Restore from URL on first load
   useEffect(() => {
@@ -152,6 +139,27 @@ export default function Home() {
     history.replaceState(null, "", `?${stateToParams(state)}`);
   }, [state]);
 
+  // Subscribe to user's hotels from Firestore
+  useEffect(() => {
+    if (!user) { setHotels([]); return; }
+    return subscribeToHotels(user.uid, setHotels);
+  }, [user]);
+
+  // Auto-select first hotel when hotels load or change
+  useEffect(() => {
+    const makkahHotels  = hotels.filter(h => h.city === "makkah");
+    const madinahHotels = hotels.filter(h => h.city === "madinah");
+    setState(prev => ({
+      ...prev,
+      makkahHotelId: makkahHotels.some(h => h.id === prev.makkahHotelId)
+        ? prev.makkahHotelId
+        : (makkahHotels[0]?.id ?? ""),
+      madinahHotelId: madinahHotels.some(h => h.id === prev.madinahHotelId)
+        ? prev.madinahHotelId
+        : (madinahHotels[0]?.id ?? ""),
+    }));
+  }, [hotels]);
+
   function setField<K extends keyof CalculatorState>(key: K, value: CalculatorState[K]) {
     setState((prev) => ({ ...prev, [key]: value, activePreset: null }));
   }
@@ -160,25 +168,53 @@ export default function Home() {
     const preset = PACKAGE_PRESETS.find((p) => p.tier === tier)!;
     setState((prev) => ({
       ...prev,
-      flightClass:    preset.flightClass,
-      makkahHotelId:  preset.makkahHotelId,
-      shuttleMakkah:  preset.shuttleMakkah,
-      madinahHotelId: preset.madinahHotelId,
-      shuttleMadinah: preset.shuttleMadinah,
-      nightsMakkah:   preset.nightsMakkah,
-      nightsMadinah:  preset.nightsMadinah,
-      visaFee:        preset.visaFee,
-      serviceFee:     preset.serviceFee,
-      insuranceFee:   preset.insuranceFee,
-      ziyaratFee:     preset.ziyaratFee,
-      activePreset:   tier,
+      flightClass:   preset.flightClass,
+      nightsMakkah:  preset.nightsMakkah,
+      nightsMadinah: preset.nightsMadinah,
+      visaFee:       preset.visaFee,
+      serviceFee:    preset.serviceFee,
+      insuranceFee:  preset.insuranceFee,
+      ziyaratFee:    preset.ziyaratFee,
+      activePreset:  tier,
     }));
   }
 
-  const result = useMemo(() => calculate(state), [state]);
+  const result = useMemo(() => calculate(state, hotels), [state, hotels]);
+
+  const makkahHotels  = hotels.filter(h => h.city === "makkah");
+  const madinahHotels = hotels.filter(h => h.city === "madinah");
+
+  // Exchange rate display for current currency
+  const activeCurrencyData = CURRENCIES.find(c => c.code === state.currency);
+  const defaultPkrPerForeign = activeCurrencyData && state.currency !== "PKR"
+    ? Math.round(1 / activeCurrencyData.rate)
+    : null;
+  const currentPkrPerForeign = state.currency !== "PKR"
+    ? (state.customRates[state.currency] ?? defaultPkrPerForeign ?? 0)
+    : null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-900">
+        <div className="flex flex-col items-center gap-3">
+          <div className="bg-emerald-800 rounded-2xl p-3 animate-pulse">
+            <Logo className="w-10 h-10" />
+          </div>
+          <p className="text-sm text-gray-400">Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <LoginPage />;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-900">
+
+      {/* Hotel Manager Modal */}
+      {showHotelManager && (
+        <HotelManager hotels={hotels} onClose={() => setShowHotelManager(false)} />
+      )}
 
       {/* Header */}
       <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 sticky top-0 z-10 shadow-sm">
@@ -192,22 +228,58 @@ export default function Home() {
                 <h1 className="text-lg font-bold text-emerald-800 dark:text-emerald-400 leading-tight">
                   Umrah Calculator
                 </h1>
-                <span className="hidden sm:inline-block text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full uppercase tracking-wide">
-                  PKR
-                </span>
               </div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight">
-                Estimate your Umrah journey cost
+              <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight hidden sm:block">
+                {user.displayName ?? user.email}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Display in:</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Exchange rate input */}
+            {state.currency !== "PKR" && currentPkrPerForeign !== null && (
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <span className="hidden sm:inline">1 {state.currency} =</span>
+                <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-800 focus-within:ring-1 focus-within:ring-emerald-400">
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={currentPkrPerForeign}
+                    onChange={e => {
+                      const val = parseInt(e.target.value);
+                      if (!isNaN(val) && val > 0) {
+                        setState(prev => ({
+                          ...prev,
+                          customRates: { ...prev.customRates, [prev.currency]: val },
+                        }));
+                      }
+                    }}
+                    className="w-20 px-2 py-1.5 text-xs text-gray-800 dark:text-gray-200 bg-transparent focus:outline-none"
+                  />
+                  <span className="pr-2 text-gray-400">PKR</span>
+                </div>
+              </div>
+            )}
+            <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Display:</span>
             <CurrencySelector
               value={state.currency}
               onChange={(c) => setState((prev) => ({ ...prev, currency: c }))}
             />
+            <button
+              onClick={() => setShowHotelManager(true)}
+              className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-lg px-2.5 py-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
+            >
+              <Settings size={13} />
+              <span className="hidden sm:inline">Hotels</span>
+            </button>
             <ThemeToggle />
+            <button
+              onClick={logout}
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              title="Sign out"
+            >
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
       </header>
@@ -222,7 +294,6 @@ export default function Home() {
         {/* 1. Flight & Travellers */}
         <SectionCard title="Flight & Travellers" number="1">
           <div className="space-y-5">
-            {/* Departure city + flight fares */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -237,9 +308,9 @@ export default function Home() {
                     setState((prev) => ({
                       ...prev,
                       departureCity: city,
-                      economyFare:  preset.economyFare,
-                      businessFare: preset.businessFare,
-                      activePreset: null,
+                      economyFare:   preset.economyFare,
+                      businessFare:  preset.businessFare,
+                      activePreset:  null,
                     }));
                   }}
                   className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 dark:focus:ring-emerald-700"
@@ -250,7 +321,6 @@ export default function Home() {
                 </select>
               </div>
 
-              {/* Economy fare */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Economy Fare <span className="text-gray-400 font-normal">(PKR, round-trip)</span>
@@ -258,9 +328,7 @@ export default function Home() {
                 <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700 focus-within:ring-2 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700">
                   <span className="px-2.5 text-sm text-gray-400 dark:text-gray-500 shrink-0">₨</span>
                   <input
-                    type="number"
-                    min={0}
-                    step={5000}
+                    type="number" min={0} step={5000}
                     value={state.economyFare}
                     onChange={(e) => setField("economyFare", Math.max(0, parseInt(e.target.value) || 0))}
                     className="flex-1 py-2.5 pr-3 text-sm text-gray-800 dark:text-gray-100 bg-transparent focus:outline-none min-w-0"
@@ -268,7 +336,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Business fare */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Business Fare <span className="text-gray-400 font-normal">(PKR, round-trip)</span>
@@ -276,9 +343,7 @@ export default function Home() {
                 <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700 focus-within:ring-2 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700">
                   <span className="px-2.5 text-sm text-gray-400 dark:text-gray-500 shrink-0">₨</span>
                   <input
-                    type="number"
-                    min={0}
-                    step={5000}
+                    type="number" min={0} step={5000}
                     value={state.businessFare}
                     onChange={(e) => setField("businessFare", Math.max(0, parseInt(e.target.value) || 0))}
                     className="flex-1 py-2.5 pr-3 text-sm text-gray-800 dark:text-gray-100 bg-transparent focus:outline-none min-w-0"
@@ -287,7 +352,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Travellers */}
             <TravellerInput
               numAdults={state.numAdults}
               numInfants={state.numInfants}
@@ -302,21 +366,23 @@ export default function Home() {
           <SectionCard title="Hotel in Makkah" number="2" className="!mb-0">
             <HotelPicker
               city="makkah"
-              hotels={MAKKAH_HOTELS}
+              hotels={makkahHotels}
               selectedHotelId={state.makkahHotelId}
               shuttleEnabled={state.shuttleMakkah}
               onHotelChange={(id) => setField("makkahHotelId", id)}
               onShuttleChange={(v) => setField("shuttleMakkah", v)}
+              onManageHotels={() => setShowHotelManager(true)}
             />
           </SectionCard>
           <SectionCard title="Hotel in Madinah" number="3" className="!mb-0">
             <HotelPicker
               city="madinah"
-              hotels={MADINAH_HOTELS}
+              hotels={madinahHotels}
               selectedHotelId={state.madinahHotelId}
               shuttleEnabled={state.shuttleMadinah}
               onHotelChange={(id) => setField("madinahHotelId", id)}
               onShuttleChange={(v) => setField("shuttleMadinah", v)}
+              onManageHotels={() => setShowHotelManager(true)}
             />
           </SectionCard>
         </div>
@@ -346,18 +412,16 @@ export default function Home() {
           <h2 className="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 no-print">
             5. Your Estimate
           </h2>
-          <PriceSummary result={result} currency={state.currency} />
+          <PriceSummary result={result} currency={state.currency} customRates={state.customRates} />
         </section>
 
         <footer className="no-print text-center text-xs text-gray-400 dark:text-gray-500 pb-6 sm:pb-8">
-          <p>Prices are indicative estimates. Hotel rates are per person per night (double sharing).</p>
+          <p>Prices are indicative estimates. Hotel rates are per person per night.</p>
           <p className="mt-1">Flight fares in PKR · Currency conversions are approximate.</p>
         </footer>
       </div>
 
-      {/* PDF-style print document — hidden on screen, shown only on print */}
-      <PrintLayout state={state} result={result} currency={state.currency} />
-
+      <PrintLayout state={state} result={result} currency={state.currency} hotels={hotels} customRates={state.customRates} />
     </main>
   );
 }

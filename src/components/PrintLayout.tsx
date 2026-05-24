@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { CalculatorState, CalculationResult, Currency } from "@/types";
+import type { CalculatorState, CalculationResult, Currency, Hotel } from "@/types";
 import { getHotelById, convertFromPKR, formatCurrency } from "@/lib/calculator";
 import { PACKAGE_PRESETS } from "@/data/packages";
 import Logo from "@/components/Logo";
@@ -10,11 +10,10 @@ interface Props {
   state: CalculatorState;
   result: CalculationResult;
   currency: Currency;
+  hotels: Hotel[];
+  customRates?: Partial<Record<string, number>>;
 }
 
-function fmt(pkr: number, currency: Currency) {
-  return formatCurrency(convertFromPKR(pkr, currency), currency);
-}
 function fmtPKR(pkr: number) {
   return formatCurrency(pkr, "PKR");
 }
@@ -32,9 +31,13 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
   );
 }
 
-export default function PrintLayout({ state, result, currency }: Props) {
-  const makkahHotel  = getHotelById(state.makkahHotelId);
-  const madinahHotel = getHotelById(state.madinahHotelId);
+export default function PrintLayout({ state, result, currency, hotels, customRates }: Props) {
+  function fmt(pkr: number) {
+    return formatCurrency(convertFromPKR(pkr, currency, customRates), currency);
+  }
+
+  const makkahHotel  = getHotelById(state.makkahHotelId, hotels);
+  const madinahHotel = getHotelById(state.madinahHotelId, hotels);
   const preset       = PACKAGE_PRESETS.find((p) => p.tier === state.activePreset);
   const today        = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const showCurrency = currency !== "PKR";
@@ -43,7 +46,7 @@ export default function PrintLayout({ state, result, currency }: Props) {
   return (
     <div className="print-layout hidden bg-white text-gray-900 text-sm font-sans p-8 max-w-3xl mx-auto">
 
-      {/* ── Document header ── */}
+      {/* Document header */}
       <div className="flex items-center justify-between mb-6 pb-5 border-b-2 border-emerald-700">
         <div className="flex items-center gap-3">
           <div className="bg-emerald-800 rounded-xl p-2">
@@ -67,7 +70,7 @@ export default function PrintLayout({ state, result, currency }: Props) {
         </div>
       </div>
 
-      {/* ── Trip overview ── */}
+      {/* Trip overview */}
       <div className="mb-6">
         <div className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-2">Trip Overview</div>
         <table className="w-full text-sm">
@@ -86,61 +89,75 @@ export default function PrintLayout({ state, result, currency }: Props) {
         </table>
       </div>
 
-      {/* ── Accommodation ── */}
+      {/* Accommodation */}
       <div className="mb-6">
         <div className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-2">Accommodation</div>
         <div className="grid grid-cols-2 gap-4">
           {/* Makkah */}
           <div className="border border-gray-200 rounded-xl p-4">
             <div className="text-xs font-bold uppercase text-gray-400 mb-2">Makkah</div>
-            <div className="font-semibold text-gray-900 leading-snug mb-1">{makkahHotel.name}</div>
-            <div className="text-yellow-500 text-xs mb-1"><Stars count={makkahHotel.stars} /></div>
-            <table className="w-full text-xs text-gray-600">
-              <tbody>
-                <tr><td className="pr-3 py-0.5 text-gray-400">Distance</td><td>{makkahHotel.distanceLabel}</td></tr>
-                <tr><td className="pr-3 py-0.5 text-gray-400">Duration</td><td>{state.nightsMakkah} nights</td></tr>
-                <tr>
-                  <td className="pr-3 py-0.5 text-gray-400">Shuttle</td>
-                  <td>{state.shuttleMakkah ? "✓ Included" : "✗ Not included"}</td>
-                </tr>
-                <tr>
-                  <td className="pr-3 py-0.5 text-gray-400">Rate/night</td>
-                  <td className="font-medium">
-                    {fmtPKR(state.shuttleMakkah ? makkahHotel.priceWithShuttle : makkahHotel.priceWithoutShuttle)}
-                    <span className="text-gray-400 font-normal"> /person</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            {makkahHotel ? (
+              <>
+                <div className="font-semibold text-gray-900 leading-snug mb-1">{makkahHotel.name}</div>
+                <div className="text-yellow-500 text-xs mb-1"><Stars count={makkahHotel.stars} /></div>
+                <table className="w-full text-xs text-gray-600">
+                  <tbody>
+                    <tr><td className="pr-3 py-0.5 text-gray-400">Distance</td><td>{makkahHotel.distanceLabel}</td></tr>
+                    <tr><td className="pr-3 py-0.5 text-gray-400">Sharing</td><td>{makkahHotel.sharingType}</td></tr>
+                    <tr><td className="pr-3 py-0.5 text-gray-400">Duration</td><td>{state.nightsMakkah} nights</td></tr>
+                    <tr>
+                      <td className="pr-3 py-0.5 text-gray-400">Shuttle</td>
+                      <td>{state.shuttleMakkah ? "✓ Included" : "✗ Not included"}</td>
+                    </tr>
+                    <tr>
+                      <td className="pr-3 py-0.5 text-gray-400">Rate/night</td>
+                      <td className="font-medium">
+                        {fmtPKR(state.shuttleMakkah ? makkahHotel.priceWithShuttle : makkahHotel.priceWithoutShuttle)}
+                        <span className="text-gray-400 font-normal"> /person</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </>
+            ) : (
+              <div className="text-sm text-gray-400 italic">Not selected</div>
+            )}
           </div>
 
           {/* Madinah */}
           <div className="border border-gray-200 rounded-xl p-4">
             <div className="text-xs font-bold uppercase text-gray-400 mb-2">Madinah</div>
-            <div className="font-semibold text-gray-900 leading-snug mb-1">{madinahHotel.name}</div>
-            <div className="text-yellow-500 text-xs mb-1"><Stars count={madinahHotel.stars} /></div>
-            <table className="w-full text-xs text-gray-600">
-              <tbody>
-                <tr><td className="pr-3 py-0.5 text-gray-400">Distance</td><td>{madinahHotel.distanceLabel}</td></tr>
-                <tr><td className="pr-3 py-0.5 text-gray-400">Duration</td><td>{state.nightsMadinah} nights</td></tr>
-                <tr>
-                  <td className="pr-3 py-0.5 text-gray-400">Shuttle</td>
-                  <td>{state.shuttleMadinah ? "✓ Included" : "✗ Not included"}</td>
-                </tr>
-                <tr>
-                  <td className="pr-3 py-0.5 text-gray-400">Rate/night</td>
-                  <td className="font-medium">
-                    {fmtPKR(state.shuttleMadinah ? madinahHotel.priceWithShuttle : madinahHotel.priceWithoutShuttle)}
-                    <span className="text-gray-400 font-normal"> /person</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            {madinahHotel ? (
+              <>
+                <div className="font-semibold text-gray-900 leading-snug mb-1">{madinahHotel.name}</div>
+                <div className="text-yellow-500 text-xs mb-1"><Stars count={madinahHotel.stars} /></div>
+                <table className="w-full text-xs text-gray-600">
+                  <tbody>
+                    <tr><td className="pr-3 py-0.5 text-gray-400">Distance</td><td>{madinahHotel.distanceLabel}</td></tr>
+                    <tr><td className="pr-3 py-0.5 text-gray-400">Sharing</td><td>{madinahHotel.sharingType}</td></tr>
+                    <tr><td className="pr-3 py-0.5 text-gray-400">Duration</td><td>{state.nightsMadinah} nights</td></tr>
+                    <tr>
+                      <td className="pr-3 py-0.5 text-gray-400">Shuttle</td>
+                      <td>{state.shuttleMadinah ? "✓ Included" : "✗ Not included"}</td>
+                    </tr>
+                    <tr>
+                      <td className="pr-3 py-0.5 text-gray-400">Rate/night</td>
+                      <td className="font-medium">
+                        {fmtPKR(state.shuttleMadinah ? madinahHotel.priceWithShuttle : madinahHotel.priceWithoutShuttle)}
+                        <span className="text-gray-400 font-normal"> /person</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </>
+            ) : (
+              <div className="text-sm text-gray-400 italic">Not selected</div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* ── Price breakdown ── */}
+      {/* Price breakdown */}
       <div className="mb-6">
         <div className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-2">Price Breakdown</div>
         <table className="w-full text-sm border border-gray-200 rounded-xl overflow-hidden">
@@ -165,7 +182,7 @@ export default function PrintLayout({ state, result, currency }: Props) {
                     )}
                   </td>
                   <td className="py-2 px-4 text-right font-medium whitespace-nowrap">
-                    {fmt(item.adultAmountPKR, currency)}
+                    {fmt(item.adultAmountPKR)}
                   </td>
                   {showCurrency && (
                     <td className="py-2 px-4 text-right text-gray-400 whitespace-nowrap text-xs">
@@ -180,7 +197,7 @@ export default function PrintLayout({ state, result, currency }: Props) {
                       ↳ Infants × {result.numInfants}
                     </td>
                     <td className="py-1.5 px-4 text-right text-amber-600 text-xs whitespace-nowrap">
-                      {fmt(item.infantAmountPKR, currency)}
+                      {fmt(item.infantAmountPKR)}
                     </td>
                     {showCurrency && (
                       <td className="py-1.5 px-4 text-right text-amber-400 text-xs whitespace-nowrap">
@@ -198,7 +215,7 @@ export default function PrintLayout({ state, result, currency }: Props) {
                 Subtotal ({result.numAdults + result.numInfants} pax)
               </td>
               <td className="py-2 px-4 text-right font-medium whitespace-nowrap">
-                {fmt(result.subtotalPKR, currency)}
+                {fmt(result.subtotalPKR)}
               </td>
               {showCurrency && (
                 <td className="py-2 px-4 text-right text-gray-400 whitespace-nowrap text-xs">
@@ -213,7 +230,7 @@ export default function PrintLayout({ state, result, currency }: Props) {
                   Group Discount ({result.discountLabel})
                 </td>
                 <td className="py-2 px-4 text-right font-medium text-emerald-700 whitespace-nowrap">
-                  − {fmt(result.discountPKR, currency)}
+                  − {fmt(result.discountPKR)}
                 </td>
                 {showCurrency && (
                   <td className="py-2 px-4 text-right text-emerald-500 whitespace-nowrap text-xs">
@@ -227,7 +244,7 @@ export default function PrintLayout({ state, result, currency }: Props) {
             <tr className="bg-emerald-700 text-white">
               <td className="py-3 px-4 font-bold text-base">TOTAL PACKAGE COST</td>
               <td className="py-3 px-4 text-right font-bold text-base whitespace-nowrap">
-                {fmt(result.totalPKR, currency)}
+                {fmt(result.totalPKR)}
               </td>
               {showCurrency && (
                 <td className="py-3 px-4 text-right text-emerald-200 whitespace-nowrap text-xs">
@@ -240,7 +257,7 @@ export default function PrintLayout({ state, result, currency }: Props) {
             <tr className="bg-emerald-50 border-t border-emerald-200">
               <td className="py-2 px-4 text-emerald-800 font-medium">Per Adult</td>
               <td className="py-2 px-4 text-right font-bold text-emerald-700 whitespace-nowrap">
-                {fmt(result.totalPerAdultPKR, currency)}
+                {fmt(result.totalPerAdultPKR)}
               </td>
               {showCurrency && (
                 <td className="py-2 px-4 text-right text-emerald-500 whitespace-nowrap text-xs">
@@ -252,7 +269,7 @@ export default function PrintLayout({ state, result, currency }: Props) {
         </table>
       </div>
 
-      {/* ── Applied fees ── */}
+      {/* Applied fees */}
       <div className="mb-6">
         <div className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-2">
           Applied Fees (per adult)
@@ -278,10 +295,10 @@ export default function PrintLayout({ state, result, currency }: Props) {
         )}
       </div>
 
-      {/* ── Footer ── */}
+      {/* Footer */}
       <div className="pt-4 border-t border-gray-200 text-xs text-gray-400 space-y-1">
         <p>• Prices are indicative estimates based on current market rates and may vary at time of booking.</p>
-        <p>• Hotel rates are per person per night on a double-sharing basis.</p>
+        <p>• Hotel rates are per person per night.</p>
         <p>• Flight fares are quoted in PKR. {showCurrency ? `Amounts shown in ${currency} use indicative conversion rates.` : ""}</p>
         <p>• This estimate does not constitute a confirmed booking. Contact your travel agent to confirm.</p>
       </div>
