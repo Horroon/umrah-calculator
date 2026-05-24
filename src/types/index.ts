@@ -43,7 +43,7 @@ export interface PackagePreset {
 export interface VisaTier {
   id: string;
   minPax: number;
-  costPKR: number;
+  cost: number; // amount in the user's selected currency at time of entry
 }
 
 export interface CalculatorState {

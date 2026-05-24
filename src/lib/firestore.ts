@@ -1,9 +1,9 @@
 import {
   collection, addDoc, updateDoc, deleteDoc, doc,
-  query, where, onSnapshot, serverTimestamp, type Unsubscribe,
+  query, where, onSnapshot, serverTimestamp, getDoc, setDoc, type Unsubscribe,
 } from "firebase/firestore";
 import { firebaseDb } from "@/lib/firebase";
-import type { Hotel } from "@/types";
+import type { Hotel, VisaTier } from "@/types";
 
 export function subscribeToHotels(userId: string, cb: (hotels: Hotel[]) => void): Unsubscribe {
   const q = query(collection(firebaseDb(), "hotels"), where("userId", "==", userId));
@@ -23,4 +23,15 @@ export async function updateHotel(id: string, data: Partial<Omit<Hotel, "id" | "
 
 export async function deleteHotel(id: string) {
   await deleteDoc(doc(firebaseDb(), "hotels", id));
+}
+
+export async function loadVisaTiers(userId: string): Promise<VisaTier[] | null> {
+  const snap = await getDoc(doc(firebaseDb(), "userSettings", userId));
+  if (!snap.exists()) return null;
+  const tiers = snap.data()?.visaTiers;
+  return Array.isArray(tiers) ? (tiers as VisaTier[]) : null;
+}
+
+export async function saveVisaTiers(userId: string, tiers: VisaTier[]): Promise<void> {
+  await setDoc(doc(firebaseDb(), "userSettings", userId), { visaTiers: tiers }, { merge: true });
 }

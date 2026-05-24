@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import type { PackageTier, Currency, CalculatorState, Hotel, SharingType, VisaTier } from "@/types";
 import { PACKAGE_PRESETS, FLIGHT_OPTIONS, CURRENCIES } from "@/data/packages";
 import { calculate } from "@/lib/calculator";
 import { useAuth } from "@/contexts/AuthContext";
-import { subscribeToHotels } from "@/lib/firestore";
+import { subscribeToHotels, loadVisaTiers, saveVisaTiers } from "@/lib/firestore";
 import CurrencySelector from "@/components/CurrencySelector";
 import PriceSummary from "@/components/PriceSummary";
 import Logo from "@/components/Logo";
@@ -42,7 +42,7 @@ const DEFAULT_STATE: CalculatorState = {
   currency:           "PKR",
   activePreset:       "silver",
   customRates:        {},
-  visaTiers:          [{ id: "t1", minPax: 1, costPKR: SILVER.visaFee }],
+  visaTiers:          [{ id: "t1", minPax: 1, cost: SILVER.visaFee }],
 };
 
 const VALID_SHARING: SharingType[] = ["DUBL", "TRPL", "QUAD", "SHARING"];
@@ -113,8 +113,17 @@ function computeActiveTier(tiers: VisaTier[], totalPax: number): VisaTier | null
   return sorted.find(t => t.minPax <= totalPax) ?? sorted[sorted.length - 1];
 }
 
-function computeVisaFee(tiers: VisaTier[], totalPax: number): number {
-  return computeActiveTier(tiers, totalPax)?.costPKR ?? 0;
+function computeVisaFee(
+  tiers: VisaTier[], totalPax: number,
+  currency: Currency, customRates: Partial<Record<string, number>>,
+): number {
+  const tier = computeActiveTier(tiers, totalPax);
+  if (!tier) return 0;
+  if (currency === "PKR") return tier.cost;
+  const c = CURRENCIES.find(c => c.code === currency);
+  if (!c) return tier.cost;
+  const pkrPerUnit = customRates[currency] ?? Math.round(1 / c.rate);
+  return Math.round(tier.cost * pkrPerUnit);
 }
 
 function SectionCard({ title, number, children, className = "" }: {
@@ -135,6 +144,7 @@ export default function Home() {
   const [state, setState]           = useState<CalculatorState>(DEFAULT_STATE);
   const [hotels, setHotels]         = useState<Hotel[]>([]);
   const [showHotelManager, setShowHotelManager] = useState(false);
+  const visaTiersLoaded = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -150,6 +160,22 @@ export default function Home() {
     return subscribeToHotels(user.uid, setHotels);
   }, [user]);
 
+  // Load visa tiers from Firestore when user logs in
+  useEffect(() => {
+    if (!user) { visaTiersLoaded.current = false; return; }
+    loadVisaTiers(user.uid).then(tiers => {
+      visaTiersLoaded.current = true;
+      if (tiers && tiers.length > 0) setState(prev => ({ ...prev, visaTiers: tiers }));
+    });
+  }, [user]);
+
+  // Auto-save visa tiers (debounced), only after initial Firestore load
+  useEffect(() => {
+    if (!user || !visaTiersLoaded.current) return;
+    const t = setTimeout(() => saveVisaTiers(user.uid, state.visaTiers), 800);
+    return () => clearTimeout(t);
+  }, [user, state.visaTiers]);
+
   // Auto-select first hotel when hotels load
   useEffect(() => {
     const mk = hotels.filter(h => h.city === "makkah");
@@ -161,23 +187,24 @@ export default function Home() {
     }));
   }, [hotels]);
 
-  // Keep visaFee in sync with tiers and pax count
+  // Keep visaFee in sync with tiers, pax count, currency, and exchange rates
   useEffect(() => {
-    const fee = computeVisaFee(state.visaTiers, state.numAdults + state.numInfants);
+    const fee = computeVisaFee(state.visaTiers, state.numAdults + state.numInfants, state.currency, state.customRates);
     if (fee !== state.visaFee) setState(prev => ({ ...prev, visaFee: fee }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.numAdults, state.numInfants, state.visaTiers]);
+  }, [state.numAdults, state.numInfants, state.visaTiers, state.currency, state.customRates]);
 
   function setField<K extends keyof CalculatorState>(key: K, value: CalculatorState[K]) {
     setState(prev => ({ ...prev, [key]: value, activePreset: null }));
   }
 
   function addTier() {
-    const next: VisaTier = { id: Date.now().toString(), minPax: (state.numAdults + state.numInfants) + 1, costPKR: 0 };
+    const maxPax = state.visaTiers.reduce((m, t) => Math.max(m, t.minPax), 0);
+    const next: VisaTier = { id: Date.now().toString(), minPax: maxPax + 1, cost: 0 };
     setField("visaTiers", [...state.visaTiers, next]);
   }
 
-  function updateTier(id: string, field: "minPax" | "costPKR", value: number) {
+  function updateTier(id: string, field: "minPax" | "cost", value: number) {
     setState(prev => ({
       ...prev,
       activePreset: null,
@@ -352,57 +379,74 @@ export default function Home() {
           </div>
 
           {/* Visa cost tiers */}
-          <div>
-            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2.5">Visa Cost by Group Size</div>
-            <div className="space-y-1.5">
-              <div className="grid grid-cols-[88px_1fr_28px] gap-2 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide px-1 mb-1">
-                <span>Min Pax</span>
-                <span>Per Person (₨)</span>
-                <span />
+          {(() => {
+            const currencyMeta = CURRENCIES.find(c => c.code === state.currency)!;
+            const currSymbol   = currencyMeta.symbol;
+            const totalPax     = state.numAdults + state.numInfants;
+            const activeTier   = computeActiveTier(state.visaTiers, totalPax);
+            return (
+              <div>
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    Visa Cost by Group Size
+                  </span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                    amounts in {currencyMeta.name} ({state.currency})
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="grid grid-cols-[88px_1fr_28px] gap-2 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide px-1 mb-1">
+                    <span>Min Pax</span>
+                    <span>Per Person ({state.currency})</span>
+                    <span />
+                  </div>
+                  {[...state.visaTiers]
+                    .sort((a, b) => a.minPax - b.minPax)
+                    .map(tier => {
+                      const isActive = tier.id === activeTier?.id;
+                      return (
+                        <div key={tier.id}
+                          className={`grid grid-cols-[88px_1fr_28px] gap-2 items-center rounded-lg px-2 py-1.5 transition-colors
+                            ${isActive
+                              ? "bg-emerald-50 dark:bg-emerald-900/20 ring-1 ring-emerald-300 dark:ring-emerald-700"
+                              : "bg-gray-50 dark:bg-gray-700/50"}`}>
+                          <div className="flex items-center gap-1">
+                            <input type="number" min={1} max={50} value={tier.minPax}
+                              onChange={e => updateTier(tier.id, "minPax", Math.max(1, parseInt(e.target.value) || 1))}
+                              className="w-11 text-sm font-semibold text-center bg-transparent focus:outline-none text-gray-800 dark:text-gray-100" />
+                            <span className="text-xs text-gray-400 dark:text-gray-500">pax+</span>
+                          </div>
+                          <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-800 focus-within:ring-1 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700">
+                            <span className="pl-2 text-xs text-gray-400 dark:text-gray-500">{currSymbol}</span>
+                            <input type="number" min={0} step={state.currency === "PKR" ? 1000 : 1} value={tier.cost}
+                              onChange={e => updateTier(tier.id, "cost", Math.max(0, parseFloat(e.target.value) || 0))}
+                              className="flex-1 px-1.5 py-1.5 text-sm bg-transparent focus:outline-none text-gray-800 dark:text-gray-100 min-w-0" />
+                          </div>
+                          <button onClick={() => deleteTier(tier.id)} disabled={state.visaTiers.length <= 1}
+                            className="w-7 h-7 rounded-lg text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30 flex items-center justify-center transition-colors text-base leading-none">
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  <button onClick={addTier}
+                    className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline mt-0.5 ml-1">
+                    <Plus size={11} /> Add tier
+                  </button>
+                </div>
+                {activeTier && (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
+                    {totalPax} pax → {currSymbol}{activeTier.cost.toLocaleString()} per person
+                    {state.currency !== "PKR" && currentPkrPerForeign !== null && (
+                      <span className="text-gray-400 dark:text-gray-500 ml-1">
+                        (≈ ₨{(activeTier.cost * currentPkrPerForeign).toLocaleString()} PKR)
+                      </span>
+                    )}
+                  </p>
+                )}
               </div>
-              {[...state.visaTiers]
-                .sort((a, b) => a.minPax - b.minPax)
-                .map(tier => {
-                  const isActive = tier.id === computeActiveTier(state.visaTiers, state.numAdults + state.numInfants)?.id;
-                  return (
-                    <div key={tier.id}
-                      className={`grid grid-cols-[88px_1fr_28px] gap-2 items-center rounded-lg px-2 py-1.5 transition-colors
-                        ${isActive
-                          ? "bg-emerald-50 dark:bg-emerald-900/20 ring-1 ring-emerald-300 dark:ring-emerald-700"
-                          : "bg-gray-50 dark:bg-gray-700/50"}`}>
-                      <div className="flex items-center gap-1">
-                        <input type="number" min={1} max={50} value={tier.minPax}
-                          onChange={e => updateTier(tier.id, "minPax", Math.max(1, parseInt(e.target.value) || 1))}
-                          className="w-11 text-sm font-semibold text-center bg-transparent focus:outline-none text-gray-800 dark:text-gray-100" />
-                        <span className="text-xs text-gray-400 dark:text-gray-500">pax+</span>
-                      </div>
-                      <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-800 focus-within:ring-1 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700">
-                        <span className="pl-2 text-xs text-gray-400 dark:text-gray-500">₨</span>
-                        <input type="number" min={0} step={1000} value={tier.costPKR}
-                          onChange={e => updateTier(tier.id, "costPKR", Math.max(0, parseInt(e.target.value) || 0))}
-                          className="flex-1 px-1.5 py-1.5 text-sm bg-transparent focus:outline-none text-gray-800 dark:text-gray-100 min-w-0" />
-                      </div>
-                      <button onClick={() => deleteTier(tier.id)} disabled={state.visaTiers.length <= 1}
-                        className="w-7 h-7 rounded-lg text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30 flex items-center justify-center transition-colors text-base leading-none">
-                        ×
-                      </button>
-                    </div>
-                  );
-                })}
-              <button onClick={addTier}
-                className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline mt-0.5 ml-1">
-                <Plus size={11} /> Add tier
-              </button>
-            </div>
-            {(() => {
-              const active = computeActiveTier(state.visaTiers, state.numAdults + state.numInfants);
-              return active ? (
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
-                  {state.numAdults + state.numInfants} pax → ₨{active.costPKR.toLocaleString()} per person
-                </p>
-              ) : null;
-            })()}
-          </div>
+            );
+          })()}
         </div>
 
         {/* 1. Flight & Travellers */}
