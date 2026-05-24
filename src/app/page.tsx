@@ -528,16 +528,13 @@ export default function Home() {
             serviceFee={state.serviceFee}
             insuranceFee={state.insuranceFee} ziyaratFee={state.ziyaratFee}
             infantCharges={state.infantCharges}
-            currency={state.currency}
-            customRate={currentPkrPerForeign}
             onNightsMakkahChange={n => setField("nightsMakkah", n)}
             onNightsMadinahChange={n => setField("nightsMadinah", n)}
             onFlightClassChange={c => setField("flightClass", c)}
             onServiceChange={v => setField("serviceFee", v)}
             onInsuranceChange={v => setField("insuranceFee", v)}
             onZiyaratChange={v => setField("ziyaratFee", v)}
-            onInfantChargesChange={v => setField("infantCharges", v)}
-            onRateChange={rate => setState(prev => ({ ...prev, customRates: { ...prev.customRates, [prev.currency]: rate } }))} />
+            onInfantChargesChange={v => setField("infantCharges", v)} />
             
         </SectionCard>
 
@@ -546,16 +543,15 @@ export default function Home() {
           <h2 className="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 no-print">
             5. Your Estimate
           </h2>
-          <PriceSummary result={result} currency={state.currency} customRates={state.customRates} />
+          <PriceSummary result={result} />
         </section>
 
         <footer className="no-print text-center text-xs text-gray-400 dark:text-gray-500 pb-6 sm:pb-8">
-          <p>Prices are indicative estimates. Hotel rates are per person per night.</p>
-          <p className="mt-1">Flight fares in PKR · Currency conversions are approximate.</p>
+          <p>All amounts in PKR. Hotel rates are per person per night. Visa costs converted using your entered exchange rate.</p>
         </footer>
       </div>
 
-      <PrintLayout state={state} result={result} currency={state.currency} hotels={hotels} customRates={state.customRates} />
+      <PrintLayout state={state} result={result} hotels={hotels} />
     </main>
   );
 }

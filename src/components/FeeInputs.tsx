@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { FlightClass, Currency } from "@/types";
+import type { FlightClass } from "@/types";
 import { Minus, Plus } from "lucide-react";
 
 interface Props {
@@ -12,8 +12,6 @@ interface Props {
   insuranceFee: number;
   ziyaratFee: number;
   infantCharges: number;
-  currency: Currency;
-  customRate: number | null;
   onNightsMakkahChange: (n: number) => void;
   onNightsMadinahChange: (n: number) => void;
   onFlightClassChange: (c: FlightClass) => void;
@@ -21,7 +19,6 @@ interface Props {
   onInsuranceChange: (v: number) => void;
   onZiyaratChange: (v: number) => void;
   onInfantChargesChange: (v: number) => void;
-  onRateChange: (rate: number) => void;
 }
 
 const DURATION_PRESETS = [
@@ -76,10 +73,9 @@ function FeeField({ label, hint, value, onChange }: {
 export default function FeeInputs({
   nightsMakkah, nightsMadinah, flightClass,
   serviceFee, insuranceFee, ziyaratFee, infantCharges,
-  currency, customRate,
   onNightsMakkahChange, onNightsMadinahChange, onFlightClassChange,
   onServiceChange, onInsuranceChange, onZiyaratChange,
-  onInfantChargesChange, onRateChange,
+  onInfantChargesChange,
 }: Props) {
   const [customMode, setCustomMode] = useState(false);
 
@@ -169,28 +165,6 @@ export default function FeeInputs({
         <FeeField label="Ziyarat & Transport" hint="(0 = none)" value={ziyaratFee} onChange={onZiyaratChange} />
         <FeeField label="Infant Charges" hint="(per infant)" value={infantCharges} onChange={onInfantChargesChange} />
       </div>
-
-      {/* Exchange rate */}
-      {currency !== "PKR" && customRate !== null && (
-        <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-            Exchange Rate
-          </label>
-          <div className="flex items-center gap-2 max-w-xs">
-            <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">1 {currency} =</span>
-            <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700 focus-within:ring-2 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700 flex-1">
-              <input type="number" min={1} step={1} value={customRate}
-                onChange={e => {
-                  const val = parseInt(e.target.value);
-                  if (!isNaN(val) && val > 0) onRateChange(val);
-                }}
-                className="flex-1 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 bg-transparent focus:outline-none min-w-0"
-              />
-              <span className="pr-3 text-xs text-gray-400 dark:text-gray-500">PKR</span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,22 +1,21 @@
 "use client";
 
-import type { Currency, CalculationResult } from "@/types";
-import { convertFromPKR, formatCurrency } from "@/lib/calculator";
+import type { CalculationResult } from "@/types";
+import { formatCurrency } from "@/lib/calculator";
 import { Users, Baby, Tag, TrendingDown, Wallet, Printer, Link, Check } from "lucide-react";
 import Logo from "@/components/Logo";
 import { useState } from "react";
 
 interface Props {
   result: CalculationResult;
-  currency: Currency;
-  customRates?: Partial<Record<string, number>>;
 }
 
-export default function PriceSummary({ result, currency, customRates }: Props) {
-  const [copied, setCopied] = useState(false);
+function fmt(pkr: number) {
+  return formatCurrency(pkr, "PKR");
+}
 
-  const fmt    = (pkr: number) => formatCurrency(convertFromPKR(pkr, currency, customRates), currency);
-  const fmtPKR = (pkr: number) => formatCurrency(pkr, "PKR");
+export default function PriceSummary({ result }: Props) {
+  const [copied, setCopied] = useState(false);
 
   function copyLink() {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -51,7 +50,7 @@ export default function PriceSummary({ result, currency, customRates }: Props) {
           <p className="text-emerald-100 text-xs sm:text-sm mt-0.5">
             {result.numAdults} adult{result.numAdults !== 1 ? "s" : ""}
             {showInfants && ` · ${result.numInfants} infant${result.numInfants !== 1 ? "s" : ""}`}
-            {" · per-person rates"}
+            {" · per-person rates · all amounts in PKR"}
           </p>
         </div>
         <div className="no-print flex items-center gap-2 shrink-0">
@@ -84,15 +83,12 @@ export default function PriceSummary({ result, currency, customRates }: Props) {
                 {showInfants && item.infantAmountPKR > 0 && (
                   <div className="flex items-center gap-1 mt-0.5 text-xs text-amber-600 dark:text-amber-400">
                     <Baby size={10} />
-                    <span>+{fmtPKR(item.infantAmountPKR)} infants</span>
+                    <span>+{fmt(item.infantAmountPKR)} infants</span>
                   </div>
                 )}
               </div>
-              <div className="text-right shrink-0">
-                <div className="font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">{fmt(totalPKR)}</div>
-                {currency !== "PKR" && (
-                  <div className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">{fmtPKR(totalPKR)}</div>
-                )}
+              <div className="font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap shrink-0">
+                {fmt(totalPKR)}
               </div>
             </div>
           );
@@ -102,46 +98,34 @@ export default function PriceSummary({ result, currency, customRates }: Props) {
         <div className="border-t border-gray-100 dark:border-gray-700 pt-3 space-y-2">
           {showInfants && (
             <>
-              <div className="flex justify-between items-start gap-3 text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex justify-between items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
                 <span className="flex items-center gap-1.5 shrink-0">
                   <Users size={13} />Adults subtotal ({result.numAdults})
                 </span>
-                <div className="text-right">
-                  <div className="font-medium whitespace-nowrap">{fmt(result.adultSubtotalPKR)}</div>
-                  {currency !== "PKR" && <div className="text-xs opacity-70 whitespace-nowrap">{fmtPKR(result.adultSubtotalPKR)}</div>}
-                </div>
+                <span className="font-medium whitespace-nowrap">{fmt(result.adultSubtotalPKR)}</span>
               </div>
-              <div className="flex justify-between items-start gap-3 text-sm text-amber-600 dark:text-amber-400">
+              <div className="flex justify-between items-center gap-3 text-sm text-amber-600 dark:text-amber-400">
                 <span className="flex items-center gap-1.5 shrink-0">
                   <Baby size={13} />Infants subtotal ({result.numInfants})
                 </span>
-                <div className="text-right">
-                  <div className="font-medium whitespace-nowrap">{fmt(result.infantSubtotalPKR)}</div>
-                  {currency !== "PKR" && <div className="text-xs opacity-70 whitespace-nowrap">{fmtPKR(result.infantSubtotalPKR)}</div>}
-                </div>
+                <span className="font-medium whitespace-nowrap">{fmt(result.infantSubtotalPKR)}</span>
               </div>
             </>
           )}
 
-          <div className="flex justify-between items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex justify-between items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
             <span className="flex items-center gap-1.5 shrink-0">
               <Users size={13} />Subtotal ({result.numAdults + result.numInfants} pax)
             </span>
-            <div className="text-right">
-              <div className="font-medium whitespace-nowrap">{fmt(result.subtotalPKR)}</div>
-              {currency !== "PKR" && <div className="text-xs opacity-70 whitespace-nowrap">{fmtPKR(result.subtotalPKR)}</div>}
-            </div>
+            <span className="font-medium whitespace-nowrap">{fmt(result.subtotalPKR)}</span>
           </div>
 
           {result.discountPKR > 0 && (
-            <div className="flex justify-between items-start gap-3 text-sm text-emerald-600 dark:text-emerald-400">
+            <div className="flex justify-between items-center gap-3 text-sm text-emerald-600 dark:text-emerald-400">
               <span className="flex items-center gap-1.5 shrink-0">
                 <TrendingDown size={13} />Group Discount ({result.discountLabel})
               </span>
-              <div className="text-right">
-                <div className="font-medium whitespace-nowrap">−{fmt(result.discountPKR)}</div>
-                {currency !== "PKR" && <div className="text-xs opacity-70 whitespace-nowrap">−{fmtPKR(result.discountPKR)}</div>}
-              </div>
+              <span className="font-medium whitespace-nowrap">−{fmt(result.discountPKR)}</span>
             </div>
           )}
         </div>
@@ -152,34 +136,22 @@ export default function PriceSummary({ result, currency, customRates }: Props) {
             <span className="flex items-center gap-1.5 font-semibold text-emerald-800 dark:text-emerald-300 text-sm sm:text-base">
               <Wallet size={15} />Total
             </span>
-            <div className="text-right">
-              <div className="text-lg sm:text-xl font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
-                {fmt(result.totalPKR)}
-              </div>
-              {currency !== "PKR" && (
-                <div className="text-xs text-emerald-500 whitespace-nowrap">{fmtPKR(result.totalPKR)}</div>
-              )}
-            </div>
+            <span className="text-lg sm:text-xl font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+              {fmt(result.totalPKR)}
+            </span>
           </div>
           <div className="flex justify-between items-center mt-2 pt-2 border-t border-emerald-200 dark:border-emerald-800 gap-3">
             <span className="flex items-center gap-1.5 text-xs sm:text-sm text-emerald-700 dark:text-emerald-400 shrink-0">
               <Tag size={12} />Per Adult
             </span>
-            <div className="text-right">
-              <div className="font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                {fmt(result.totalPerAdultPKR)}
-              </div>
-              {currency !== "PKR" && (
-                <div className="text-xs text-emerald-400 dark:text-emerald-500 whitespace-nowrap">
-                  {fmtPKR(result.totalPerAdultPKR)}
-                </div>
-              )}
-            </div>
+            <span className="font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+              {fmt(result.totalPerAdultPKR)}
+            </span>
           </div>
         </div>
 
         <p className="text-xs text-gray-400 dark:text-gray-500 pt-1">
-          * Flight fares in PKR. Conversions are indicative. Hotel prices per person per night. Prices may vary.
+          * All amounts in PKR. Hotel rates are per person per night. Visa costs converted using the exchange rate you entered. Prices are indicative.
         </p>
       </div>
     </div>

@@ -1,17 +1,15 @@
 "use client";
 
 import React from "react";
-import type { CalculatorState, CalculationResult, Currency, Hotel } from "@/types";
-import { getHotelById, getHotelPrice, convertFromPKR, formatCurrency } from "@/lib/calculator";
+import type { CalculatorState, CalculationResult, Hotel } from "@/types";
+import { getHotelById, getHotelPrice, formatCurrency } from "@/lib/calculator";
 import { PACKAGE_PRESETS } from "@/data/packages";
 import Logo from "@/components/Logo";
 
 interface Props {
   state: CalculatorState;
   result: CalculationResult;
-  currency: Currency;
   hotels: Hotel[];
-  customRates?: Partial<Record<string, number>>;
 }
 
 function fmtPKR(pkr: number) {
@@ -31,16 +29,11 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
   );
 }
 
-export default function PrintLayout({ state, result, currency, hotels, customRates }: Props) {
-  function fmt(pkr: number) {
-    return formatCurrency(convertFromPKR(pkr, currency, customRates), currency);
-  }
-
+export default function PrintLayout({ state, result, hotels }: Props) {
   const makkahHotel  = getHotelById(state.makkahHotelId, hotels);
   const madinahHotel = getHotelById(state.madinahHotelId, hotels);
   const preset       = PACKAGE_PRESETS.find((p) => p.tier === state.activePreset);
   const today        = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-  const showCurrency = currency !== "PKR";
   const totalNights  = state.nightsMakkah + state.nightsMadinah;
 
   return (
@@ -84,7 +77,6 @@ export default function PrintLayout({ state, result, currency, hotels, customRat
               value={`${result.numAdults} Adult${result.numAdults !== 1 ? "s" : ""}${result.numInfants > 0 ? ` · ${result.numInfants} Infant${result.numInfants !== 1 ? "s" : ""} (under 2)` : ""}`}
             />
             <Row label="Total Duration"  value={`${totalNights} Nights  (${state.nightsMakkah}N Makkah · ${state.nightsMadinah}N Madinah)`} />
-            <Row label="Display Currency" value={currency} />
           </tbody>
         </table>
       </div>
@@ -164,16 +156,12 @@ export default function PrintLayout({ state, result, currency, hotels, customRat
           <thead>
             <tr className="bg-emerald-700 text-white">
               <th className="text-left py-2 px-4 font-semibold">Description</th>
-              <th className="text-right py-2 px-4 font-semibold whitespace-nowrap">
-                {showCurrency ? currency : "PKR"}
-              </th>
-              {showCurrency && <th className="text-right py-2 px-4 font-semibold text-emerald-200">PKR</th>}
+              <th className="text-right py-2 px-4 font-semibold whitespace-nowrap">PKR</th>
             </tr>
           </thead>
           <tbody>
             {result.breakdown.map((item, idx) => (
               <React.Fragment key={item.label}>
-                {/* Adult row */}
                 <tr className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                   <td className="py-2 px-4 text-gray-700">
                     {item.label}
@@ -182,88 +170,44 @@ export default function PrintLayout({ state, result, currency, hotels, customRat
                     )}
                   </td>
                   <td className="py-2 px-4 text-right font-medium whitespace-nowrap">
-                    {fmt(item.adultAmountPKR)}
+                    {fmtPKR(item.adultAmountPKR)}
                   </td>
-                  {showCurrency && (
-                    <td className="py-2 px-4 text-right text-gray-400 whitespace-nowrap text-xs">
-                      {fmtPKR(item.adultAmountPKR)}
-                    </td>
-                  )}
                 </tr>
-                {/* Infant row (if applicable) */}
                 {result.numInfants > 0 && item.infantAmountPKR > 0 && (
                   <tr className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} border-t border-dashed border-gray-100`}>
                     <td className="py-1.5 px-4 pl-8 text-amber-600 text-xs">
                       ↳ Infants × {result.numInfants}
                     </td>
                     <td className="py-1.5 px-4 text-right text-amber-600 text-xs whitespace-nowrap">
-                      {fmt(item.infantAmountPKR)}
+                      {fmtPKR(item.infantAmountPKR)}
                     </td>
-                    {showCurrency && (
-                      <td className="py-1.5 px-4 text-right text-amber-400 text-xs whitespace-nowrap">
-                        {fmtPKR(item.infantAmountPKR)}
-                      </td>
-                    )}
                   </tr>
                 )}
               </React.Fragment>
             ))}
 
-            {/* Subtotals */}
             <tr className="border-t-2 border-gray-300 bg-gray-50">
-              <td className="py-2 px-4 text-gray-500">
-                Subtotal ({result.numAdults + result.numInfants} pax)
-              </td>
-              <td className="py-2 px-4 text-right font-medium whitespace-nowrap">
-                {fmt(result.subtotalPKR)}
-              </td>
-              {showCurrency && (
-                <td className="py-2 px-4 text-right text-gray-400 whitespace-nowrap text-xs">
-                  {fmtPKR(result.subtotalPKR)}
-                </td>
-              )}
+              <td className="py-2 px-4 text-gray-500">Subtotal ({result.numAdults + result.numInfants} pax)</td>
+              <td className="py-2 px-4 text-right font-medium whitespace-nowrap">{fmtPKR(result.subtotalPKR)}</td>
             </tr>
 
             {result.discountPKR > 0 && (
               <tr className="bg-emerald-50">
-                <td className="py-2 px-4 text-emerald-700">
-                  Group Discount ({result.discountLabel})
-                </td>
+                <td className="py-2 px-4 text-emerald-700">Group Discount ({result.discountLabel})</td>
                 <td className="py-2 px-4 text-right font-medium text-emerald-700 whitespace-nowrap">
-                  − {fmt(result.discountPKR)}
+                  − {fmtPKR(result.discountPKR)}
                 </td>
-                {showCurrency && (
-                  <td className="py-2 px-4 text-right text-emerald-500 whitespace-nowrap text-xs">
-                    − {fmtPKR(result.discountPKR)}
-                  </td>
-                )}
               </tr>
             )}
 
-            {/* Grand total */}
             <tr className="bg-emerald-700 text-white">
               <td className="py-3 px-4 font-bold text-base">TOTAL PACKAGE COST</td>
-              <td className="py-3 px-4 text-right font-bold text-base whitespace-nowrap">
-                {fmt(result.totalPKR)}
-              </td>
-              {showCurrency && (
-                <td className="py-3 px-4 text-right text-emerald-200 whitespace-nowrap text-xs">
-                  {fmtPKR(result.totalPKR)}
-                </td>
-              )}
+              <td className="py-3 px-4 text-right font-bold text-base whitespace-nowrap">{fmtPKR(result.totalPKR)}</td>
             </tr>
 
-            {/* Per adult */}
             <tr className="bg-emerald-50 border-t border-emerald-200">
               <td className="py-2 px-4 text-emerald-800 font-medium">Per Adult</td>
-              <td className="py-2 px-4 text-right font-bold text-emerald-700 whitespace-nowrap">
-                {fmt(result.totalPerAdultPKR)}
-              </td>
-              {showCurrency && (
-                <td className="py-2 px-4 text-right text-emerald-500 whitespace-nowrap text-xs">
-                  {fmtPKR(result.totalPerAdultPKR)}
-                </td>
-              )}
+              <td className="py-2 px-4 text-right font-bold text-emerald-700 whitespace-nowrap">{fmtPKR(result.totalPerAdultPKR)}</td>
             </tr>
           </tbody>
         </table>
@@ -300,7 +244,7 @@ export default function PrintLayout({ state, result, currency, hotels, customRat
       <div className="pt-4 border-t border-gray-200 text-xs text-gray-400 space-y-1">
         <p>• Prices are indicative estimates based on current market rates and may vary at time of booking.</p>
         <p>• Hotel rates are per person per night.</p>
-        <p>• Flight fares are quoted in PKR. {showCurrency ? `Amounts shown in ${currency} use indicative conversion rates.` : ""}</p>
+        <p>• All amounts are in Pakistani Rupees (PKR). Visa costs are converted from the rate entered by the user.</p>
         <p>• This estimate does not constitute a confirmed booking. Contact your travel agent to confirm.</p>
       </div>
 
