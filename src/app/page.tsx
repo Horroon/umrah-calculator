@@ -171,13 +171,15 @@ export default function Home() {
     loadVisaTiers(user.uid).then(tiers => {
       visaTiersLoaded.current = true;
       if (tiers && tiers.length > 0) setState(prev => ({ ...prev, visaTiers: tiers }));
+    }).catch(() => {
+      visaTiersLoaded.current = true;
     });
   }, [user]);
 
   // Auto-save visa tiers (debounced), only after initial Firestore load
   useEffect(() => {
     if (!user || !visaTiersLoaded.current) return;
-    const t = setTimeout(() => saveVisaTiers(user.uid, state.visaTiers), 800);
+    const t = setTimeout(() => saveVisaTiers(user.uid, state.visaTiers).catch(() => {}), 800);
     return () => clearTimeout(t);
   }, [user, state.visaTiers]);
 
