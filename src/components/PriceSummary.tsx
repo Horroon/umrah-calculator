@@ -3,7 +3,7 @@
 import type { Currency } from "@/types";
 import type { CalculationResult } from "@/lib/calculator";
 import { convertFromPKR, formatCurrency } from "@/lib/calculator";
-import { Users, Tag, TrendingDown, Wallet } from "lucide-react";
+import { Users, Tag, TrendingDown, Wallet, Printer } from "lucide-react";
 
 interface Props {
   result: CalculationResult;
@@ -16,11 +16,26 @@ export default function PriceSummary({ result, currency }: Props) {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="bg-gradient-to-r from-emerald-700 to-emerald-500 px-6 py-4">
-        <h2 className="text-white font-semibold text-lg">Price Breakdown</h2>
-        <p className="text-emerald-100 text-sm mt-0.5">
-          {result.numPersons} {result.numPersons === 1 ? "person" : "persons"} · All prices per person
-        </p>
+      {/* Print-only header */}
+      <div className="hidden print:block px-6 pt-6 pb-2 border-b border-gray-100">
+        <h1 className="text-xl font-bold text-emerald-800">Umrah Package Calculator</h1>
+        <p className="text-xs text-gray-400 mt-0.5">Estimate generated on {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</p>
+      </div>
+
+      <div className="bg-gradient-to-r from-emerald-700 to-emerald-500 px-6 py-4 flex items-center justify-between gap-4 print:bg-none print:bg-emerald-700">
+        <div>
+          <h2 className="text-white font-semibold text-lg">Price Breakdown</h2>
+          <p className="text-emerald-100 text-sm mt-0.5">
+            {result.numPersons} {result.numPersons === 1 ? "person" : "persons"} · All prices per person
+          </p>
+        </div>
+        <button
+          onClick={() => window.print()}
+          className="no-print flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+        >
+          <Printer size={15} />
+          Print / PDF
+        </button>
       </div>
 
       <div className="p-6 space-y-3">

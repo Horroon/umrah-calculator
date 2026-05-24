@@ -38,10 +38,10 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+      <div className="max-w-5xl mx-auto px-4 py-8 space-y-8 print-only-summary">
 
         {/* Package Selection */}
-        <section>
+        <section className="no-print">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
             1. Choose Your Package
           </h2>
@@ -58,7 +58,7 @@ export default function Home() {
         </section>
 
         {/* Trip Details */}
-        <section className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+        <section className="no-print bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-5">
             2. Trip Details
           </h2>
@@ -128,15 +128,15 @@ export default function Home() {
         </section>
 
         {/* Price Summary */}
-        <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+        <section className="price-summary-section">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 no-print">
             3. Your Estimate
           </h2>
           <PriceSummary result={result} currency={currency} />
         </section>
 
         {/* Disclaimer */}
-        <footer className="text-center text-xs text-gray-400 pb-8">
+        <footer className="no-print text-center text-xs text-gray-400 pb-8">
           <p>Prices are indicative estimates based on current market rates.</p>
           <p className="mt-1">Flight fares displayed in PKR · Conversion rates are approximate.</p>
         </footer>
