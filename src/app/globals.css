@@ -13,8 +13,11 @@ body {
 }
 
 @media print {
+  /* Hide all interactive UI — only the PrintLayout renders */
   header,
-  .no-print {
+  .no-print,
+  .price-summary-section,
+  .print-only-summary {
     display: none !important;
   }
 
@@ -27,13 +30,16 @@ body {
   main {
     background: white !important;
     padding: 0 !important;
+    min-height: unset !important;
   }
 
-  .print-only-summary > *:not(.price-summary-section) {
-    display: none !important;
+  /* Show the dedicated print layout */
+  .print-layout {
+    display: block !important;
   }
 
-  .price-summary-section {
+  /* Prevent table rows from splitting across pages */
+  tr {
     break-inside: avoid;
   }
 }

@@ -14,6 +14,7 @@ import PresetChips from "@/components/PresetChips";
 import TravellerInput from "@/components/TravellerInput";
 import HotelPicker from "@/components/HotelPicker";
 import FeeInputs from "@/components/FeeInputs";
+import PrintLayout from "@/components/PrintLayout";
 import { MapPin } from "lucide-react";
 
 const SILVER = PACKAGE_PRESETS.find((p) => p.tier === "silver")!;
@@ -292,6 +293,10 @@ export default function Home() {
           <p className="mt-1">Flight fares in PKR · Currency conversions are approximate.</p>
         </footer>
       </div>
+
+      {/* PDF-style print document — hidden on screen, shown only on print */}
+      <PrintLayout state={state} result={result} currency={state.currency} />
+
     </main>
   );
 }
