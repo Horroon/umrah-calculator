@@ -21,14 +21,14 @@ interface HotelForm {
   priceTriple: number;
   priceQuad: number;
   priceSharing: number;
-  shuttleSurcharge: number;
+  shuttle: boolean;
 }
 
 const EMPTY_FORM: HotelForm = {
   name: "", city: "makkah", stars: 4,
   distanceLabel: "", distanceMeters: 0,
   priceDouble: 0, priceTriple: 0, priceQuad: 0, priceSharing: 0,
-  shuttleSurcharge: 0,
+  shuttle: false,
 };
 
 function fmt(n: number) {
@@ -72,7 +72,7 @@ export default function HotelManager({ hotels, onClose }: Props) {
       distanceLabel: hotel.distanceLabel, distanceMeters: hotel.distanceMeters,
       priceDouble: hotel.priceDouble, priceTriple: hotel.priceTriple,
       priceQuad: hotel.priceQuad, priceSharing: hotel.priceSharing,
-      shuttleSurcharge: hotel.shuttleSurcharge,
+      shuttle: hotel.shuttle ?? false,
     });
     setEditingId(hotel.id); setError(""); setMode("edit");
   }
@@ -155,9 +155,9 @@ export default function HotelManager({ hotels, onClose }: Props) {
                                   ))}
                                 </span>
                                 <span className="text-xs text-gray-400">{hotel.distanceLabel}</span>
-                                {hotel.shuttleSurcharge > 0 && (
+                                {hotel.shuttle && (
                                   <span className="flex items-center gap-0.5 text-xs text-emerald-600 dark:text-emerald-400">
-                                    <Bus size={10} /> Shuttle +{fmt(hotel.shuttleSurcharge)}
+                                    <Bus size={10} /> Shuttle
                                   </span>
                                 )}
                               </div>
@@ -273,21 +273,15 @@ export default function HotelManager({ hotels, onClose }: Props) {
                 </div>
               </div>
 
-              {/* Shuttle surcharge */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Shuttle Surcharge
-                  <span className="text-xs font-normal text-gray-400 ml-1">(PKR/person/night · 0 = no shuttle)</span>
+              {/* Shuttle availability */}
+              <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-4 py-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <Bus size={15} className={form.shuttle ? "text-emerald-500" : "text-gray-400"} />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Shuttle Service Available</span>
                 </label>
-                <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800 focus-within:ring-2 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700 max-w-xs">
-                  <Bus size={14} className="ml-3 text-gray-400 shrink-0" />
-                  <span className="px-2 text-sm text-gray-400 shrink-0">₨</span>
-                  <input type="number" min={0} step={500}
-                    value={form.shuttleSurcharge || ""}
-                    onChange={e => setF("shuttleSurcharge", Math.max(0, parseInt(e.target.value) || 0))}
-                    placeholder="0"
-                    className="flex-1 py-2.5 pr-3 text-sm text-gray-900 dark:text-gray-100 bg-transparent focus:outline-none min-w-0"
-                  />
+                <div onClick={() => setF("shuttle", !form.shuttle)}
+                  className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${form.shuttle ? "bg-emerald-500" : "bg-gray-200 dark:bg-gray-600"}`}>
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.shuttle ? "translate-x-5" : ""}`} />
                 </div>
               </div>
 

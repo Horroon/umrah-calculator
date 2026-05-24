@@ -8,7 +8,14 @@ import type { Hotel, VisaTier } from "@/types";
 export function subscribeToHotels(userId: string, cb: (hotels: Hotel[]) => void): Unsubscribe {
   const q = query(collection(firebaseDb(), "hotels"), where("userId", "==", userId));
   return onSnapshot(q, (snap) => {
-    const hotels = snap.docs.map((d) => ({ ...d.data(), id: d.id } as Hotel));
+    const hotels = snap.docs.map((d) => {
+      const data = d.data() as Record<string, unknown>;
+      // Backward compat: old docs stored shuttleSurcharge (number); derive shuttle boolean
+      if (typeof data.shuttle === "undefined" && typeof data.shuttleSurcharge === "number") {
+        data.shuttle = (data.shuttleSurcharge as number) > 0;
+      }
+      return { ...data, id: d.id } as Hotel;
+    });
     cb(hotels);
   });
 }

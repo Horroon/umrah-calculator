@@ -8,13 +8,11 @@ export function getHotelById(id: string, hotels: Hotel[]): Hotel | undefined {
   return hotels.find((h) => h.id === id);
 }
 
-export function getHotelPrice(hotel: Hotel, sharingType: SharingType, shuttle: boolean): number {
-  const base =
-    sharingType === "DUBL" ? hotel.priceDouble :
+export function getHotelPrice(hotel: Hotel, sharingType: SharingType): number {
+  return sharingType === "DUBL" ? hotel.priceDouble :
     sharingType === "TRPL" ? hotel.priceTriple :
     sharingType === "QUAD" ? hotel.priceQuad   :
     hotel.priceSharing;
-  return base + (shuttle ? hotel.shuttleSurcharge : 0);
 }
 
 export function getFlightFare(city: string, flightClass: "economy" | "business") {
@@ -47,8 +45,8 @@ export function calculate(state: CalculatorState, hotels: Hotel[]): CalculationR
   const {
     departureCity, flightClass, economyFare, businessFare,
     numAdults, numInfants,
-    makkahHotelId, makkahSharingType, shuttleMakkah, nightsMakkah,
-    madinahHotelId, madinahSharingType, shuttleMadinah, nightsMadinah,
+    makkahHotelId, makkahSharingType, nightsMakkah,
+    madinahHotelId, madinahSharingType, nightsMadinah,
     visaFee, serviceFee, insuranceFee, ziyaratFee,
     infantCharges = 0,
   } = state;
@@ -56,14 +54,14 @@ export function calculate(state: CalculatorState, hotels: Hotel[]): CalculationR
   const flightFare = flightClass === "economy" ? economyFare : businessFare;
   const mHotel = getHotelById(makkahHotelId, hotels);
   const dHotel = getHotelById(madinahHotelId, hotels);
-  const mRate  = mHotel ? getHotelPrice(mHotel, makkahSharingType,  shuttleMakkah)  : 0;
-  const dRate  = dHotel ? getHotelPrice(dHotel, madinahSharingType, shuttleMadinah) : 0;
+  const mRate  = mHotel ? getHotelPrice(mHotel, makkahSharingType)  : 0;
+  const dRate  = dHotel ? getHotelPrice(dHotel, madinahSharingType) : 0;
 
   const makkahLabel  = mHotel
-    ? `Hotel Makkah – ${mHotel.name} (${nightsMakkah}N · ${makkahSharingType}${shuttleMakkah && mHotel.shuttleSurcharge > 0 ? " · shuttle ✓" : ""})`
+    ? `Hotel Makkah – ${mHotel.name} (${nightsMakkah}N · ${makkahSharingType}${mHotel.shuttle ? " · shuttle ✓" : ""})`
     : `Hotel Makkah (${nightsMakkah}N)`;
   const madinahLabel = dHotel
-    ? `Hotel Madinah – ${dHotel.name} (${nightsMadinah}N · ${madinahSharingType}${shuttleMadinah && dHotel.shuttleSurcharge > 0 ? " · shuttle ✓" : ""})`
+    ? `Hotel Madinah – ${dHotel.name} (${nightsMadinah}N · ${madinahSharingType}${dHotel.shuttle ? " · shuttle ✓" : ""})`
     : `Hotel Madinah (${nightsMadinah}N)`;
 
   const infantFlight  = flightFare * INFANT_FLIGHT_RATIO;

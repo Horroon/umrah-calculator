@@ -50,7 +50,7 @@ export default function HotelPicker({
   // Filter by shuttle and distance; sort ascending by distance
   const filtered = useMemo(() => {
     return hotels
-      .filter(h => !shuttleEnabled || h.shuttleSurcharge > 0)
+      .filter(h => !shuttleEnabled || h.shuttle)
       .filter(h => filterMaxDist === null || h.distanceMeters <= filterMaxDist)
       .sort((a, b) => a.distanceMeters - b.distanceMeters);
   }, [hotels, shuttleEnabled, filterMaxDist]);
@@ -155,9 +155,9 @@ export default function HotelPicker({
                       <span className="flex items-center gap-0.5 text-xs text-gray-400 dark:text-gray-500">
                         <MapPin size={9} />{hotel.distanceLabel}
                       </span>
-                      {hotel.shuttleSurcharge > 0 && (
+                      {hotel.shuttle && (
                         <span className="flex items-center gap-0.5 text-xs text-emerald-500 dark:text-emerald-400">
-                          <Bus size={9} />Shuttle +{fmt(hotel.shuttleSurcharge)}
+                          <Bus size={9} />Shuttle
                         </span>
                       )}
                     </div>
@@ -168,7 +168,7 @@ export default function HotelPicker({
               {/* Sharing price chips */}
               <div className="grid grid-cols-4 gap-1.5 px-3 pb-3">
                 {SHARING_TYPES.map(type => {
-                  const price    = getHotelPrice(hotel, type, shuttleEnabled);
+                  const price    = getHotelPrice(hotel, type);
                   const isActive = isSelected && selectedSharingType === type;
                   return (
                     <button key={type}

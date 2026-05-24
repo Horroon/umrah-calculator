@@ -22,7 +22,7 @@ export interface Hotel {
   priceTriple: number;
   priceQuad: number;
   priceSharing: number;
-  shuttleSurcharge: number; // per person per night extra when shuttle on; 0 = no shuttle
+  shuttle: boolean;
   createdAt?: unknown;
 }
 

@@ -99,12 +99,12 @@ export default function PrintLayout({ state, result, hotels }: Props) {
                     <tr><td className="pr-3 py-0.5 text-gray-400">Duration</td><td>{state.nightsMakkah} nights</td></tr>
                     <tr>
                       <td className="pr-3 py-0.5 text-gray-400">Shuttle</td>
-                      <td>{state.shuttleMakkah && makkahHotel.shuttleSurcharge > 0 ? "✓ Included" : "✗ Not included"}</td>
+                      <td>{makkahHotel.shuttle ? "✓ Available" : "✗ Not available"}</td>
                     </tr>
                     <tr>
                       <td className="pr-3 py-0.5 text-gray-400">Rate/night</td>
                       <td className="font-medium">
-                        {fmtPKR(getHotelPrice(makkahHotel, state.makkahSharingType, state.shuttleMakkah))}
+                        {fmtPKR(getHotelPrice(makkahHotel, state.makkahSharingType))}
                         <span className="text-gray-400 font-normal"> /person</span>
                       </td>
                     </tr>
@@ -130,12 +130,12 @@ export default function PrintLayout({ state, result, hotels }: Props) {
                     <tr><td className="pr-3 py-0.5 text-gray-400">Duration</td><td>{state.nightsMadinah} nights</td></tr>
                     <tr>
                       <td className="pr-3 py-0.5 text-gray-400">Shuttle</td>
-                      <td>{state.shuttleMadinah && madinahHotel.shuttleSurcharge > 0 ? "✓ Included" : "✗ Not included"}</td>
+                      <td>{madinahHotel.shuttle ? "✓ Available" : "✗ Not available"}</td>
                     </tr>
                     <tr>
                       <td className="pr-3 py-0.5 text-gray-400">Rate/night</td>
                       <td className="font-medium">
-                        {fmtPKR(getHotelPrice(madinahHotel, state.madinahSharingType, state.shuttleMadinah))}
+                        {fmtPKR(getHotelPrice(madinahHotel, state.madinahSharingType))}
                         <span className="text-gray-400 font-normal"> /person</span>
                       </td>
                     </tr>
