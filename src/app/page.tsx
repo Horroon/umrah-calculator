@@ -39,10 +39,10 @@ const DEFAULT_STATE: CalculatorState = {
   insuranceFee:       SILVER.insuranceFee,
   ziyaratFee:         SILVER.ziyaratFee,
   infantCharges:      0,
-  currency:           "PKR",
+  currency:           "SAR",
   activePreset:       "silver",
   customRates:        {},
-  visaTiers:          [{ id: "t1", minPax: 1, cost: SILVER.visaFee }],
+  visaTiers:          [{ id: "t1", minPax: 1, cost: 0 }],
 };
 
 const VALID_SHARING: SharingType[] = ["DUBL", "TRPL", "QUAD", "SHARING"];
