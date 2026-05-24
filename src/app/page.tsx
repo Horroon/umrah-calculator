@@ -10,14 +10,13 @@ import CurrencySelector from "@/components/CurrencySelector";
 import PriceSummary from "@/components/PriceSummary";
 import Logo from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
-import PresetChips from "@/components/PresetChips";
 import TravellerInput from "@/components/TravellerInput";
 import HotelPicker from "@/components/HotelPicker";
 import FeeInputs from "@/components/FeeInputs";
 import PrintLayout from "@/components/PrintLayout";
 import LoginPage from "@/components/LoginPage";
 import HotelManager from "@/components/HotelManager";
-import { MapPin, Settings, LogOut } from "lucide-react";
+import { MapPin, Settings, LogOut, Minus, Plus, Users } from "lucide-react";
 
 const SILVER = PACKAGE_PRESETS.find((p) => p.tier === "silver")!;
 
@@ -251,9 +250,100 @@ export default function Home() {
 
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-5 sm:py-8 space-y-4 sm:space-y-6 print-only-summary">
 
-        {/* Presets */}
-        <div className="no-print bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 px-4 py-3 shadow-sm">
-          <PresetChips activePreset={state.activePreset} onSelect={applyPreset} />
+        {/* Quick Start */}
+        <div className="no-print bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5 shadow-sm">
+          <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Quick Start</h2>
+
+          {/* Package presets */}
+          <div className="flex items-center gap-2 flex-wrap mb-4 pb-4 border-b border-gray-100 dark:border-gray-700/60">
+            <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">Package:</span>
+            {PACKAGE_PRESETS.map(p => (
+              <button key={p.tier} onClick={() => applyPreset(p.tier)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all
+                  ${state.activePreset === p.tier
+                    ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                    : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-emerald-300 dark:hover:border-emerald-700"
+                  }`}>
+                <span className={`w-2 h-2 rounded-full bg-gradient-to-br ${p.color}`} />
+                {p.label}
+                <span className="hidden sm:inline font-normal text-gray-400 dark:text-gray-500">· {p.description}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Key inputs */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-5 gap-y-4">
+
+            {/* Adults */}
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                <Users size={11} /> Adults
+              </label>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setField("numAdults", Math.max(1, state.numAdults - 1))} disabled={state.numAdults <= 1}
+                  className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center justify-center transition-colors">
+                  <Minus size={11} />
+                </button>
+                <span className="w-6 text-center font-bold text-sm text-gray-800 dark:text-gray-100">{state.numAdults}</span>
+                <button onClick={() => setField("numAdults", Math.min(50, state.numAdults + 1))} disabled={state.numAdults >= 50}
+                  className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center justify-center transition-colors">
+                  <Plus size={11} />
+                </button>
+              </div>
+            </div>
+
+            {/* Infants */}
+            <div>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">Infants <span className="font-normal text-gray-400">(under 2)</span></label>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setField("numInfants", Math.max(0, state.numInfants - 1))} disabled={state.numInfants <= 0}
+                  className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center justify-center transition-colors">
+                  <Minus size={11} />
+                </button>
+                <span className="w-6 text-center font-bold text-sm text-gray-800 dark:text-gray-100">{state.numInfants}</span>
+                <button onClick={() => setField("numInfants", Math.min(state.numAdults, state.numInfants + 1))} disabled={state.numInfants >= state.numAdults}
+                  className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center justify-center transition-colors">
+                  <Plus size={11} />
+                </button>
+              </div>
+            </div>
+
+            {/* Visa fee */}
+            <div>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">Visa Fee <span className="font-normal text-gray-400">(per person)</span></label>
+              <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700 focus-within:ring-2 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700">
+                <span className="px-2 text-sm text-gray-400 dark:text-gray-500 shrink-0">₨</span>
+                <input type="number" min={0} step={1000} value={state.visaFee}
+                  onChange={e => setField("visaFee", Math.max(0, parseInt(e.target.value) || 0))}
+                  className="flex-1 py-1.5 pr-2 text-sm text-gray-800 dark:text-gray-100 bg-transparent focus:outline-none min-w-0" />
+              </div>
+            </div>
+
+            {/* Exchange rate */}
+            <div>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">
+                Exchange Rate
+                {state.currency === "PKR" && <span className="ml-1 font-normal text-gray-400">(select currency)</span>}
+              </label>
+              {state.currency !== "PKR" && currentPkrPerForeign !== null ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">1 {state.currency} =</span>
+                  <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700 focus-within:ring-2 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700 flex-1 min-w-0">
+                    <input type="number" min={1} step={1} value={currentPkrPerForeign}
+                      onChange={e => {
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val) && val > 0)
+                          setState(prev => ({ ...prev, customRates: { ...prev.customRates, [prev.currency]: val } }));
+                      }}
+                      className="flex-1 px-2 py-1.5 text-sm text-gray-800 dark:text-gray-100 bg-transparent focus:outline-none min-w-0" />
+                    <span className="pr-2 text-xs text-gray-400 dark:text-gray-500">PKR</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-gray-300 dark:text-gray-600 py-2">— PKR selected</div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* 1. Flight & Travellers */}
