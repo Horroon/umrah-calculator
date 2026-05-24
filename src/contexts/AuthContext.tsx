@@ -26,34 +26,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const auth = firebaseAuth();
+    let mounted = true;
+    let unsub: (() => void) | null = null;
 
-    // Must be called on every mount to complete any pending redirect sign-in.
-    // We capture the promise so onAuthStateChanged can wait for it before resolving state.
-    let redirectProcessing = true;
-    const redirectDone = getRedirectResult(auth)
+    // Process any pending redirect FIRST, then read auth.currentUser as the
+    // definitive state. Only after that do we subscribe to onAuthStateChanged
+    // so there is no race between redirect processing and the initial null fire.
+    getRedirectResult(auth)
       .then((result) => {
+        if (!mounted) return;
         if (result?.user) setUser(result.user);
       })
       .catch((e: unknown) => {
+        if (!mounted) return;
         setRedirectError(e instanceof Error ? e.message : "Sign-in failed. Please try again.");
       })
-      .finally(() => { redirectProcessing = false; });
-
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if (redirectProcessing) {
-        // Redirect not yet resolved — defer and use auth.currentUser (not the stale `u`)
-        // to avoid overwriting the redirect user with an earlier null snapshot.
-        redirectDone.then(() => {
-          setUser(auth.currentUser);
+      .finally(() => {
+        if (!mounted) return;
+        // auth.currentUser is now settled (redirect processed or no redirect pending)
+        setUser(auth.currentUser);
+        setLoading(false);
+        // Subscribe for future sign-in / sign-out events
+        unsub = onAuthStateChanged(auth, (u) => {
+          setUser(u);
           setLoading(false);
         });
-      } else {
-        setUser(u);
-        setLoading(false);
-      }
-    });
+      });
 
-    return unsub;
+    return () => {
+      mounted = false;
+      unsub?.();
+    };
   }, []);
 
   function signInWithGoogle() {
