@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import type { CalculatorState, CalculationResult, Hotel } from "@/types";
-import { getHotelById, getHotelPrice, formatCurrency } from "@/lib/calculator";
+import type { CalculatorState, CalculationResult, Hotel, Flight } from "@/types";
+import { getHotelById, getHotelPrice, getFlightById, formatCurrency } from "@/lib/calculator";
 import { PACKAGE_PRESETS } from "@/data/packages";
 import Logo from "@/components/Logo";
 
@@ -10,6 +10,7 @@ interface Props {
   state: CalculatorState;
   result: CalculationResult;
   hotels: Hotel[];
+  flights: Flight[];
 }
 
 function fmtPKR(pkr: number) {
@@ -29,9 +30,10 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
   );
 }
 
-export default function PrintLayout({ state, result, hotels }: Props) {
-  const makkahHotel  = getHotelById(state.makkahHotelId, hotels);
-  const madinahHotel = getHotelById(state.madinahHotelId, hotels);
+export default function PrintLayout({ state, result, hotels, flights }: Props) {
+  const makkahHotel   = getHotelById(state.makkahHotelId, hotels);
+  const madinahHotel  = getHotelById(state.madinahHotelId, hotels);
+  const selectedFlight = getFlightById(state.selectedFlightId, flights);
   const preset       = PACKAGE_PRESETS.find((p) => p.tier === state.activePreset);
   const today        = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const totalNights  = state.nightsMakkah + state.nightsMadinah;
@@ -68,11 +70,21 @@ export default function PrintLayout({ state, result, hotels }: Props) {
         <div className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-2">Trip Overview</div>
         <table className="w-full text-sm">
           <tbody>
-            <Row label="Departure City"  value={state.departureCity} />
-            <Row
-              label="Flight Class"
-              value={`${state.flightClass === "economy" ? "Economy" : "Business"} · ${fmtPKR(state.flightClass === "economy" ? state.economyFare : state.businessFare)} per person`}
-            />
+            {selectedFlight ? (
+              <>
+                <Row label="Flight Code"  value={selectedFlight.flyCode} />
+                <Row label="Route"        value={`${selectedFlight.departureCity} → ${selectedFlight.destinationCity}`} />
+                <Row label="Charges"      value={`${fmtPKR(selectedFlight.charges)} per person`} />
+              </>
+            ) : (
+              <>
+                <Row label="Departure City"  value={state.departureCity} />
+                <Row
+                  label="Flight Class"
+                  value={`${state.flightClass === "economy" ? "Economy" : "Business"} · ${fmtPKR(state.flightClass === "economy" ? state.economyFare : state.businessFare)} per person`}
+                />
+              </>
+            )}
             <Row label="Travellers"
               value={`${result.numAdults} Adult${result.numAdults !== 1 ? "s" : ""}${result.numInfants > 0 ? ` · ${result.numInfants} Infant${result.numInfants !== 1 ? "s" : ""} (under 2)` : ""}`}
             />

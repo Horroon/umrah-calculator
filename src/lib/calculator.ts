@@ -1,11 +1,15 @@
 import { FLIGHT_OPTIONS, GROUP_DISCOUNTS, CURRENCIES } from "@/data/packages";
-import type { CalculatorState, CalculationResult, Currency, Hotel, SharingType } from "@/types";
+import type { CalculatorState, CalculationResult, Currency, Hotel, Flight, SharingType } from "@/types";
 
 const INFANT_FLIGHT_RATIO  = 0.10;
 const INFANT_SERVICE_RATIO = 0.50;
 
 export function getHotelById(id: string, hotels: Hotel[]): Hotel | undefined {
   return hotels.find((h) => h.id === id);
+}
+
+export function getFlightById(id: string, flights: Flight[]): Flight | undefined {
+  return flights.find((f) => f.id === id);
 }
 
 export function getHotelPrice(hotel: Hotel, sharingType: SharingType): number {
@@ -41,30 +45,31 @@ export function formatCurrency(amount: number, currency: Currency): string {
   return `${c.symbol}${formatted}`;
 }
 
-function hotelRateToPKR(rate: number, currency: Currency, customRates: Partial<Record<string, number>>): number {
-  if (currency === "PKR") return rate;
-  const c = CURRENCIES.find(c => c.code === currency);
-  if (!c) return rate;
-  const pkrPerUnit = customRates[currency] ?? Math.round(1 / c.rate);
-  return Math.round(rate * pkrPerUnit);
-}
-
-export function calculate(state: CalculatorState, hotels: Hotel[]): CalculationResult {
+export function calculate(state: CalculatorState, hotels: Hotel[], flights: Flight[]): CalculationResult {
   const {
-    departureCity, flightClass, economyFare, businessFare,
+    selectedFlightId, departureCity, flightClass, economyFare, businessFare,
     numAdults, numInfants,
     makkahHotelId, makkahSharingType, nightsMakkah,
     madinahHotelId, madinahSharingType, nightsMadinah,
     visaFee, serviceFee, insuranceFee, ziyaratFee,
     infantCharges = 0,
-    currency, customRates,
+    customRates,
+    currency
   } = state;
 
-  const flightFare = flightClass === "economy" ? economyFare : businessFare;
+  const selectedFlight = getFlightById(selectedFlightId, flights);
+  const flightFare = selectedFlight
+    ? selectedFlight.charges
+    : (flightClass === "economy" ? economyFare : businessFare);
+  const flightLabel = selectedFlight
+    ? `Flight (${selectedFlight.flyCode} – ${selectedFlight.departureCity})`
+    : `Flight (${flightClass === "economy" ? "Economy" : "Business"} – ${departureCity})`;
+
   const mHotel = getHotelById(makkahHotelId, hotels);
   const dHotel = getHotelById(madinahHotelId, hotels);
-  const mRate  = mHotel ? hotelRateToPKR(getHotelPrice(mHotel, makkahSharingType),  currency, customRates) : 0;
-  const dRate  = dHotel ? hotelRateToPKR(getHotelPrice(dHotel, madinahSharingType), currency, customRates) : 0;
+  // Hotel prices are stored in PKR (per person/night); use directly without currency conversion
+  const mRate  = mHotel ? getHotelPrice(mHotel, makkahSharingType)  : 0;
+  const dRate  = dHotel ? getHotelPrice(dHotel, madinahSharingType) : 0;
 
   const makkahLabel  = mHotel
     ? `Hotel Makkah – ${mHotel.name} (${nightsMakkah}N · ${makkahSharingType}${mHotel.shuttle ? " · shuttle ✓" : ""})`
@@ -78,18 +83,18 @@ export function calculate(state: CalculatorState, hotels: Hotel[]): CalculationR
 
   const breakdown = [
     {
-      label: `Flight (${flightClass === "economy" ? "Economy" : "Business"} – ${departureCity})`,
+      label: flightLabel,
       adultAmountPKR:  flightFare   * numAdults,
       infantAmountPKR: infantFlight * numInfants,
     },
     {
       label: makkahLabel,
-      adultAmountPKR:  mRate * nightsMakkah  * numAdults,
+      adultAmountPKR:  mRate * nightsMakkah  * (customRates[currency] ?? 1),
       infantAmountPKR: 0,
     },
     {
       label: madinahLabel,
-      adultAmountPKR:  dRate * nightsMadinah * numAdults,
+      adultAmountPKR:  dRate * nightsMadinah * (customRates[currency] ?? 1),
       infantAmountPKR: 0,
     },
     {

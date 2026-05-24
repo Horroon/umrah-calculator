@@ -26,6 +26,16 @@ export interface Hotel {
   createdAt?: unknown;
 }
 
+export interface Flight {
+  id: string;
+  userId?: string;
+  flyCode: string;
+  departureCity: string;
+  destinationCity: string;
+  charges: number;
+  createdAt?: unknown;
+}
+
 export interface PackagePreset {
   tier: PackageTier;
   label: string;
@@ -47,6 +57,7 @@ export interface VisaTier {
 }
 
 export interface CalculatorState {
+  selectedFlightId: string;
   departureCity: string;
   flightClass: FlightClass;
   economyFare: number;

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import type { PackageTier, Currency, CalculatorState, Hotel, SharingType, VisaTier } from "@/types";
+import type { PackageTier, Currency, CalculatorState, Hotel, Flight, SharingType, VisaTier } from "@/types";
 import { PACKAGE_PRESETS, FLIGHT_OPTIONS, CURRENCIES } from "@/data/packages";
 import { calculate } from "@/lib/calculator";
 import { useAuth } from "@/contexts/AuthContext";
-import { subscribeToHotels, loadVisaTiers, saveVisaTiers } from "@/lib/firestore";
+import { subscribeToHotels, subscribeToFlights, loadVisaTiers, saveVisaTiers, loadCustomRates, saveCustomRates } from "@/lib/firestore";
 import CurrencySelector from "@/components/CurrencySelector";
 import PriceSummary from "@/components/PriceSummary";
 import Logo from "@/components/Logo";
@@ -15,11 +15,13 @@ import FeeInputs from "@/components/FeeInputs";
 import PrintLayout from "@/components/PrintLayout";
 import LoginPage from "@/components/LoginPage";
 import HotelManager from "@/components/HotelManager";
-import { MapPin, Settings, LogOut, Minus, Plus, Users } from "lucide-react";
+import FlightManager from "@/components/FlightManager";
+import { Plane, Settings, LogOut, Minus, Plus, Users } from "lucide-react";
 
 const SILVER = PACKAGE_PRESETS.find((p) => p.tier === "silver")!;
 
 const DEFAULT_STATE: CalculatorState = {
+  selectedFlightId:   "",
   departureCity:      FLIGHT_OPTIONS[0].city,
   flightClass:        SILVER.flightClass,
   economyFare:        FLIGHT_OPTIONS[0].economyFare,
@@ -68,6 +70,7 @@ function parseState(p: URLSearchParams): CalculatorState {
   s.shuttleMadinah = p.get("ds") !== "0";
   const nm = parseInt(p.get("nm") ?? ""); if (!isNaN(nm) && nm >= 1 && nm <= 30) s.nightsMakkah  = nm;
   const nd = parseInt(p.get("nd") ?? ""); if (!isNaN(nd) && nd >= 1 && nd <= 20) s.nightsMadinah = nd;
+  const flt = p.get("flt"); if (flt) s.selectedFlightId = flt;
   const vf  = parseInt(p.get("vf")  ?? ""); if (!isNaN(vf)  && vf  >= 0) s.visaFee      = vf;
   const sf  = parseInt(p.get("sf")  ?? ""); if (!isNaN(sf)  && sf  >= 0) s.serviceFee   = sf;
   const inf = parseInt(p.get("inf") ?? ""); if (!isNaN(inf) && inf >= 0) s.insuranceFee = inf;
@@ -83,6 +86,7 @@ function parseState(p: URLSearchParams): CalculatorState {
 
 function stateToParams(s: CalculatorState): string {
   const p = new URLSearchParams();
+  p.set("flt",  s.selectedFlightId);
   p.set("city", s.departureCity);
   p.set("fc",  s.flightClass === "economy" ? "e" : "b");
   p.set("ef",  String(s.economyFare));
@@ -147,9 +151,12 @@ export default function Home() {
   const { user, loading, logout } = useAuth();
   const [state, setState]           = useState<CalculatorState>(DEFAULT_STATE);
   const [hotels, setHotels]         = useState<Hotel[]>([]);
-  const [showHotelManager, setShowHotelManager] = useState(false);
+  const [flights, setFlights]       = useState<Flight[]>([]);
+  const [showHotelManager, setShowHotelManager]   = useState(false);
+  const [showFlightManager, setShowFlightManager] = useState(false);
   const [manualTierId, setManualTierId] = useState<string | null>(null);
-  const visaTiersLoaded = useRef(false);
+  const visaTiersLoaded   = useRef(false);
+  const customRatesLoaded = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -163,6 +170,11 @@ export default function Home() {
   useEffect(() => {
     if (!user) { setHotels([]); return; }
     return subscribeToHotels(user.uid, setHotels);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) { setFlights([]); return; }
+    return subscribeToFlights(user.uid, setFlights);
   }, [user]);
 
   // Load visa tiers from Firestore when user logs in
@@ -183,6 +195,24 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [user, state.visaTiers]);
 
+  // Load custom exchange rates from Firestore when user logs in
+  useEffect(() => {
+    if (!user) { customRatesLoaded.current = false; return; }
+    loadCustomRates(user.uid).then(rates => {
+      customRatesLoaded.current = true;
+      if (rates && Object.keys(rates).length > 0) setState(prev => ({ ...prev, customRates: rates }));
+    }).catch(() => {
+      customRatesLoaded.current = true;
+    });
+  }, [user]);
+
+  // Auto-save custom exchange rates (debounced), only after initial Firestore load
+  useEffect(() => {
+    if (!user || !customRatesLoaded.current) return;
+    const t = setTimeout(() => saveCustomRates(user.uid, state.customRates).catch(() => {}), 800);
+    return () => clearTimeout(t);
+  }, [user, state.customRates]);
+
   // Auto-select first hotel when hotels load
   useEffect(() => {
     const mk = hotels.filter(h => h.city === "makkah");
@@ -193,6 +223,16 @@ export default function Home() {
       madinahHotelId: md.some(h => h.id === prev.madinahHotelId) ? prev.madinahHotelId : (md[0]?.id ?? ""),
     }));
   }, [hotels]);
+
+  // Auto-select first flight when flights load
+  useEffect(() => {
+    setState(prev => ({
+      ...prev,
+      selectedFlightId: flights.some(f => f.id === prev.selectedFlightId)
+        ? prev.selectedFlightId
+        : (flights[0]?.id ?? ""),
+    }));
+  }, [flights]);
 
   // Keep visaFee in sync; respects manual tier selection, resets it when pax/currency change
   useEffect(() => {
@@ -248,7 +288,7 @@ export default function Home() {
     }));
   }
 
-  const result = useMemo(() => calculate(state, hotels), [state, hotels]);
+  const result = useMemo(() => calculate(state, hotels, flights), [state, hotels, flights]);
 
   const makkahHotels  = hotels.filter(h => h.city === "makkah");
   const madinahHotels = hotels.filter(h => h.city === "madinah");
@@ -276,7 +316,8 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-900">
 
-      {showHotelManager && <HotelManager hotels={hotels} onClose={() => setShowHotelManager(false)} />}
+      {showHotelManager  && <HotelManager  hotels={hotels}   onClose={() => setShowHotelManager(false)} />}
+      {showFlightManager && <FlightManager flights={flights} onClose={() => setShowFlightManager(false)} />}
 
       {/* ── Header ── */}
       <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 sticky top-0 z-10 shadow-sm">
@@ -295,6 +336,11 @@ export default function Home() {
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <CurrencySelector value={state.currency} onChange={c => setState(prev => ({ ...prev, currency: c }))} />
 
+            <button onClick={() => setShowFlightManager(true)}
+              className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-lg px-2.5 py-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors">
+              <Plane size={13} />
+              <span className="hidden sm:inline">Flights</span>
+            </button>
             <button onClick={() => setShowHotelManager(true)}
               className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-lg px-2.5 py-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors">
               <Settings size={13} />
@@ -490,50 +536,65 @@ export default function Home() {
           })()}
         </div>
 
-        {/* 1. Flight & Travellers */}
-        <SectionCard title="Flight & Travellers" number="1">
-          <div className="space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Departure city */}
-              <div>
-                <label className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <MapPin size={13} className="text-emerald-600 dark:text-emerald-500" /> Departure City
-                </label>
-                <select value={state.departureCity}
-                  onChange={e => {
-                    const city = e.target.value;
-                    const preset = FLIGHT_OPTIONS.find(f => f.city === city) ?? FLIGHT_OPTIONS[0];
-                    setState(prev => ({ ...prev, departureCity: city, economyFare: preset.economyFare, businessFare: preset.businessFare, activePreset: null }));
-                  }}
-                  className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 dark:focus:ring-emerald-700">
-                  {FLIGHT_OPTIONS.map(f => <option key={f.city} value={f.city}>{f.city}</option>)}
-                </select>
-              </div>
-              {/* Economy fare */}
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Economy Fare <span className="text-gray-400 font-normal">(PKR, round-trip)</span>
-                </label>
-                <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700 focus-within:ring-2 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700">
-                  <span className="px-2.5 text-sm text-gray-400 dark:text-gray-500 shrink-0">₨</span>
-                  <input type="number" min={0} step={5000} value={state.economyFare}
-                    onChange={e => setField("economyFare", Math.max(0, parseInt(e.target.value) || 0))}
-                    className="flex-1 py-2.5 pr-3 text-sm text-gray-800 dark:text-gray-100 bg-transparent focus:outline-none min-w-0" />
-                </div>
-              </div>
-              {/* Business fare */}
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Business Fare <span className="text-gray-400 font-normal">(PKR, round-trip)</span>
-                </label>
-                <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700 focus-within:ring-2 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700">
-                  <span className="px-2.5 text-sm text-gray-400 dark:text-gray-500 shrink-0">₨</span>
-                  <input type="number" min={0} step={5000} value={state.businessFare}
-                    onChange={e => setField("businessFare", Math.max(0, parseInt(e.target.value) || 0))}
-                    className="flex-1 py-2.5 pr-3 text-sm text-gray-800 dark:text-gray-100 bg-transparent focus:outline-none min-w-0" />
-                </div>
-              </div>
+        {/* 1. Flight */}
+        <SectionCard title="Flight" number="1">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                {flights.length === 0
+                  ? "No flights added yet — click Manage to add one"
+                  : `${flights.length} flight${flights.length !== 1 ? "s" : ""} available · select one`}
+              </span>
+              <button onClick={() => setShowFlightManager(true)}
+                className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline">
+                <Settings size={11} /> Manage
+              </button>
             </div>
+
+            {flights.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+                <Plane size={28} className="text-gray-200 dark:text-gray-700 mb-2" />
+                <p className="text-sm text-gray-400 dark:text-gray-500">No flights configured</p>
+                <button onClick={() => setShowFlightManager(true)}
+                  className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline">
+                  + Add first flight
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {flights.map(flight => {
+                  const isSelected = flight.id === state.selectedFlightId;
+                  return (
+                    <button
+                      key={flight.id}
+                      onClick={() => setField("selectedFlightId", flight.id)}
+                      className={`flex items-center justify-between gap-3 p-3 rounded-xl border text-left transition-all
+                        ${isSelected
+                          ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 ring-2 ring-emerald-200 dark:ring-emerald-800"
+                          : "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-emerald-300 dark:hover:border-emerald-600"}`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors
+                          ${isSelected ? "bg-emerald-600" : "bg-gray-100 dark:bg-gray-600"}`}>
+                          <Plane size={14} className={isSelected ? "text-white" : "text-gray-400 dark:text-gray-300"} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className={`font-semibold text-sm truncate ${isSelected ? "text-emerald-800 dark:text-emerald-200" : "text-gray-900 dark:text-gray-100"}`}>
+                            {flight.flyCode}
+                          </div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                            {flight.departureCity} → {flight.destinationCity}
+                          </div>
+                        </div>
+                      </div>
+                      <div className={`text-sm font-bold shrink-0 ${isSelected ? "text-emerald-700 dark:text-emerald-300" : "text-gray-700 dark:text-gray-300"}`}>
+                        ₨{flight.charges.toLocaleString()}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </SectionCard>
 
@@ -592,7 +653,7 @@ export default function Home() {
         </footer>
       </div>
 
-      <PrintLayout state={state} result={result} hotels={hotels} />
+      <PrintLayout state={state} result={result} hotels={hotels} flights={flights} />
     </main>
   );
 }
