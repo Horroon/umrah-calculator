@@ -244,7 +244,7 @@ export default function Home() {
             {/* User + sign out */}
             <div className="flex items-center gap-2 pl-1 border-l border-gray-200 dark:border-gray-700 ml-1">
               {user.photoURL ? (
-                <img src={user.photoURL} alt={user.displayName ?? ""} className="w-7 h-7 rounded-full ring-2 ring-emerald-200 dark:ring-emerald-800" />
+                <img src={user.photoURL} alt={user.displayName ?? ""} className="w-7 h-7 rounded-full ring-2 ring-emerald-200 dark:ring-emerald-800" referrerPolicy="no-referrer"/>
               ) : (
                 <div className="w-7 h-7 rounded-full bg-emerald-700 text-white text-xs font-bold flex items-center justify-center ring-2 ring-emerald-200 dark:ring-emerald-800">
                   {initials}
