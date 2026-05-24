@@ -49,14 +49,15 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-8 print-only-summary">
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 py-5 sm:py-8 space-y-5 sm:space-y-8 print-only-summary">
 
         {/* Package Selection */}
         <section className="no-print">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+          <h2 className="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
             1. Choose Your Package
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Mobile: vertical stack; sm+: 3-column grid */}
+          <div className="flex flex-col sm:grid sm:grid-cols-3 gap-3 sm:gap-4">
             {PACKAGES.map((pkg) => (
               <PackageCard
                 key={pkg.tier}
@@ -69,16 +70,17 @@ export default function Home() {
         </section>
 
         {/* Trip Details */}
-        <section className="no-print bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-5">
+        <section className="no-print bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 shadow-sm">
+          <h2 className="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 sm:mb-5">
             2. Trip Details
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {/* Mobile: 2-col for city+persons, duration full-width below */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
             {/* Departure City */}
             <div>
-              <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
-                <MapPin size={14} className="text-emerald-600" />
+              <label className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                <MapPin size={13} className="text-emerald-600" />
                 Departure City
               </label>
               <select
@@ -94,39 +96,39 @@ export default function Home() {
 
             {/* Number of Persons */}
             <div>
-              <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
-                <Users size={14} className="text-emerald-600" />
-                Number of Persons
+              <label className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                <Users size={13} className="text-emerald-600" />
+                Persons
               </label>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button
                   onClick={() => setNumPersons((n) => Math.max(1, n - 1))}
-                  className="w-9 h-9 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 font-bold hover:bg-gray-100 transition-colors"
+                  className="w-9 h-9 shrink-0 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 font-bold hover:bg-gray-100 transition-colors text-lg leading-none"
                 >
                   −
                 </button>
-                <span className="text-xl font-bold text-gray-800 w-8 text-center">{numPersons}</span>
+                <span className="text-xl font-bold text-gray-800 flex-1 text-center">{numPersons}</span>
                 <button
                   onClick={() => setNumPersons((n) => Math.min(50, n + 1))}
-                  className="w-9 h-9 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 font-bold hover:bg-gray-100 transition-colors"
+                  className="w-9 h-9 shrink-0 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 font-bold hover:bg-gray-100 transition-colors text-lg leading-none"
                 >
                   +
                 </button>
               </div>
               {numPersons >= 5 && (
                 <p className="text-xs text-emerald-600 mt-1.5 font-medium">
-                  Group discount applied!
+                  Group discount!
                 </p>
               )}
             </div>
 
-            {/* Duration Summary */}
-            <div>
-              <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
-                <Moon size={14} className="text-emerald-600" />
+            {/* Duration Summary — full-width on mobile */}
+            <div className="col-span-2 sm:col-span-1">
+              <label className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                <Moon size={13} className="text-emerald-600" />
                 Total Duration
               </label>
-              <div className="bg-emerald-50 rounded-xl px-4 py-2.5">
+              <div className="bg-emerald-50 rounded-xl px-4 py-2.5 flex sm:block items-center justify-between">
                 <div className="text-lg font-bold text-emerald-700">
                   {selectedPkg.nightsMakkah + selectedPkg.nightsMadinah} Nights
                 </div>
@@ -140,14 +142,14 @@ export default function Home() {
 
         {/* Price Summary */}
         <section className="price-summary-section">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 no-print">
+          <h2 className="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 no-print">
             3. Your Estimate
           </h2>
           <PriceSummary result={result} currency={currency} />
         </section>
 
         {/* Disclaimer */}
-        <footer className="no-print text-center text-xs text-gray-400 pb-8">
+        <footer className="no-print text-center text-xs text-gray-400 pb-6 sm:pb-8">
           <p>Prices are indicative estimates based on current market rates.</p>
           <p className="mt-1">Flight fares displayed in PKR · Conversion rates are approximate.</p>
         </footer>
