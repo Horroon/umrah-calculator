@@ -1,90 +1,119 @@
-import {
-  PACKAGES,
-  FLIGHT_OPTIONS,
-  HOTEL_OPTIONS,
-  GROUP_DISCOUNTS,
-  CURRENCIES,
-} from "@/data/packages";
-import type { PackageTier, Currency, BreakdownItem } from "@/types";
+import { FLIGHT_OPTIONS, ALL_HOTELS, GROUP_DISCOUNTS, CURRENCIES } from "@/data/packages";
+import type { CalculatorState, CalculationResult, Currency } from "@/types";
 
-export function getPackage(tier: PackageTier) {
-  return PACKAGES.find((p) => p.tier === tier)!;
+const INFANT_FLIGHT_RATIO   = 0.10;
+const INFANT_SERVICE_RATIO  = 0.50;
+
+export function getHotelById(id: string) {
+  return ALL_HOTELS.find((h) => h.id === id) ?? ALL_HOTELS[0];
 }
 
-export function getFlightOption(city: string) {
-  return FLIGHT_OPTIONS.find((f) => f.city === city) ?? FLIGHT_OPTIONS[0];
-}
-
-export function getHotelOption(stars: number) {
-  return HOTEL_OPTIONS.find((h) => h.stars === stars) ?? HOTEL_OPTIONS[0];
-}
-
-export function getGroupDiscount(numPersons: number) {
-  return [...GROUP_DISCOUNTS].reverse().find((d) => numPersons >= d.minPersons)!;
+export function getFlightFare(city: string, flightClass: "economy" | "business") {
+  const f = FLIGHT_OPTIONS.find((o) => o.city === city) ?? FLIGHT_OPTIONS[0];
+  return flightClass === "economy" ? f.economyFare : f.businessFare;
 }
 
 export function convertFromPKR(amountPKR: number, currency: Currency): number {
-  const curr = CURRENCIES.find((c) => c.code === currency)!;
-  return amountPKR * curr.rate;
+  const c = CURRENCIES.find((c) => c.code === currency)!;
+  return amountPKR * c.rate;
 }
 
 export function formatCurrency(amount: number, currency: Currency): string {
-  const curr = CURRENCIES.find((c) => c.code === currency)!;
+  const c = CURRENCIES.find((c) => c.code === currency)!;
   const formatted = new Intl.NumberFormat("en-US", {
     minimumFractionDigits: currency === "PKR" ? 0 : 2,
     maximumFractionDigits: currency === "PKR" ? 0 : 2,
   }).format(amount);
-  return `${curr.symbol}${formatted}`;
+  return `${c.symbol}${formatted}`;
 }
 
-export interface CalculationResult {
-  breakdown: BreakdownItem[];
-  subtotalPKR: number;
-  discountPKR: number;
-  totalPKR: number;
-  totalPerPersonPKR: number;
-  discountLabel: string;
-  numPersons: number;
-}
+export function calculate(state: CalculatorState): CalculationResult {
+  const {
+    departureCity, flightClass,
+    numAdults, numInfants,
+    makkahHotelId, shuttleMakkah, nightsMakkah,
+    madinahHotelId, shuttleMadinah, nightsMadinah,
+    visaFee, serviceFee, insuranceFee, ziyaratFee,
+  } = state;
 
-export function calculate(
-  tier: PackageTier,
-  departureCity: string,
-  numPersons: number
-): CalculationResult {
-  const pkg = getPackage(tier);
-  const flight = getFlightOption(departureCity);
-  const hotel = getHotelOption(pkg.hotelStars);
-  const groupDiscount = getGroupDiscount(numPersons);
+  const flightFare = getFlightFare(departureCity, flightClass);
+  const mHotel     = getHotelById(makkahHotelId);
+  const dHotel     = getHotelById(madinahHotelId);
+  const mRate      = shuttleMakkah   ? mHotel.priceWithShuttle   : mHotel.priceWithoutShuttle;
+  const dRate      = shuttleMadinah  ? dHotel.priceWithShuttle   : dHotel.priceWithoutShuttle;
 
-  const flightFare =
-    pkg.flightClass === "economy" ? flight.economyFare : flight.businessFare;
+  // Per-adult costs
+  const adultFlight      = flightFare;
+  const adultHotelMakkah = mRate * nightsMakkah;
+  const adultHotelMadinah = dRate * nightsMadinah;
+  const adultVisa        = visaFee;
+  const adultService     = serviceFee;
+  const adultInsurance   = insuranceFee;
+  const adultZiyarat     = ziyaratFee;
 
-  const hotelMakkah = hotel.pricePerNightMakkah * pkg.nightsMakkah;
-  const hotelMadinah = hotel.pricePerNightMadinah * pkg.nightsMadinah;
+  // Per-infant costs
+  const infantFlight     = flightFare * INFANT_FLIGHT_RATIO;
+  const infantVisa       = visaFee;
+  const infantService    = serviceFee * INFANT_SERVICE_RATIO;
 
-  const breakdown: BreakdownItem[] = [
-    { label: `Flight (${pkg.flightClass === "economy" ? "Economy" : "Business"} — ${departureCity})`, amountPKR: flightFare, perPerson: true },
-    { label: `Hotel Makkah (${hotel.label} × ${pkg.nightsMakkah} nights)`, amountPKR: hotelMakkah, perPerson: true },
-    { label: `Hotel Madinah (${hotel.label} × ${pkg.nightsMadinah} nights)`, amountPKR: hotelMadinah, perPerson: true },
-    { label: "Umrah Visa Fee", amountPKR: pkg.visaFee, perPerson: true },
-    { label: "Service & Handling Charges", amountPKR: pkg.serviceFee, perPerson: true },
-    { label: "Travel Insurance", amountPKR: pkg.insuranceFee, perPerson: true },
-    { label: "Ziyarat & Local Transport", amountPKR: pkg.ziyaratFee, perPerson: true },
+  // Breakdown rows: each shows the adult total and infant total for that line
+  const breakdown = [
+    {
+      label: `Flight (${flightClass === "economy" ? "Economy" : "Business"} – ${departureCity})`,
+      adultAmountPKR:  adultFlight  * numAdults,
+      infantAmountPKR: infantFlight * numInfants,
+    },
+    {
+      label: `Hotel Makkah – ${mHotel.name} (${nightsMakkah}N${shuttleMakkah ? " · shuttle ✓" : ""})`,
+      adultAmountPKR:  adultHotelMakkah * numAdults,
+      infantAmountPKR: 0,
+    },
+    {
+      label: `Hotel Madinah – ${dHotel.name} (${nightsMadinah}N${shuttleMadinah ? " · shuttle ✓" : ""})`,
+      adultAmountPKR:  adultHotelMadinah * numAdults,
+      infantAmountPKR: 0,
+    },
+    {
+      label: "Umrah Visa Fee",
+      adultAmountPKR:  adultVisa    * numAdults,
+      infantAmountPKR: infantVisa   * numInfants,
+    },
+    {
+      label: "Service & Handling Charges",
+      adultAmountPKR:  adultService  * numAdults,
+      infantAmountPKR: infantService * numInfants,
+    },
+    ...(insuranceFee > 0 ? [{
+      label: "Travel Insurance",
+      adultAmountPKR:  adultInsurance * numAdults,
+      infantAmountPKR: 0,
+    }] : []),
+    ...(ziyaratFee > 0 ? [{
+      label: "Ziyarat & Local Transport",
+      adultAmountPKR:  adultZiyarat * numAdults,
+      infantAmountPKR: 0,
+    }] : []),
   ];
 
-  const perPersonPKR = breakdown.reduce((sum, item) => sum + item.amountPKR, 0);
-  const subtotalPKR = perPersonPKR * numPersons;
+  const adultSubtotalPKR  = breakdown.reduce((s, r) => s + r.adultAmountPKR,  0);
+  const infantSubtotalPKR = breakdown.reduce((s, r) => s + r.infantAmountPKR, 0);
+  const subtotalPKR       = adultSubtotalPKR + infantSubtotalPKR;
+
+  const totalPersons = numAdults + numInfants;
+  const groupDiscount = [...GROUP_DISCOUNTS].reverse().find((d) => totalPersons >= d.minPersons)!;
   const discountPKR = subtotalPKR * groupDiscount.discount;
-  const totalPKR = subtotalPKR - discountPKR;
+  const totalPKR    = subtotalPKR - discountPKR;
 
   return {
     breakdown,
+    adultSubtotalPKR,
+    infantSubtotalPKR,
     subtotalPKR,
     discountPKR,
     totalPKR,
-    totalPerPersonPKR: totalPKR / numPersons,
+    totalPerAdultPKR: numAdults > 0 ? (adultSubtotalPKR * (1 - groupDiscount.discount)) / numAdults : 0,
     discountLabel: groupDiscount.label,
-    numPersons,
+    numAdults,
+    numInfants,
   };
 }
