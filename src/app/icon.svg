@@ -1,0 +1,16 @@
+<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="24" cy="24" r="24" fill="#065f46"/>
+  <!-- Kaaba roof edge -->
+  <rect x="9" y="20" width="26" height="3" rx="0.5" fill="#a7f3d0"/>
+  <!-- Kaaba body -->
+  <rect x="11" y="23" width="22" height="17" rx="0.5" fill="white"/>
+  <!-- Gold Kiswah band -->
+  <rect x="11" y="27" width="22" height="3.5" fill="#f59e0b"/>
+  <!-- Door -->
+  <rect x="19" y="31" width="6" height="9" rx="0.5" fill="#f59e0b"/>
+  <!-- Crescent moon -->
+  <path d="M32 7a5.5 5.5 0 1 0 0 10 3.8 3.8 0 1 1 0-10z" fill="#f59e0b"/>
+  <!-- Star -->
+  <polygon points="40,7 40.7,9.2 43,9.2 41.2,10.5 41.9,12.7 40,11.4 38.1,12.7 38.8,10.5 37,9.2 39.3,9.2" fill="#f59e0b"/>
+</svg>

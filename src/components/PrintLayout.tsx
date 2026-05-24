@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import type { CalculatorState, CalculationResult, Currency } from "@/types";
 import { getHotelById, convertFromPKR, formatCurrency } from "@/lib/calculator";
 import { PACKAGE_PRESETS } from "@/data/packages";
@@ -151,9 +152,9 @@ export default function PrintLayout({ state, result, currency }: Props) {
           </thead>
           <tbody>
             {result.breakdown.map((item, idx) => (
-              <>
+              <React.Fragment key={item.label}>
                 {/* Adult row */}
-                <tr key={item.label} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                <tr className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                   <td className="py-2 px-4 text-gray-700">
                     {item.label}
                     {result.numAdults > 1 && (
@@ -171,7 +172,7 @@ export default function PrintLayout({ state, result, currency }: Props) {
                 </tr>
                 {/* Infant row (if applicable) */}
                 {result.numInfants > 0 && item.infantAmountPKR > 0 && (
-                  <tr key={`${item.label}-infant`} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} border-t border-dashed border-gray-100`}>
+                  <tr className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} border-t border-dashed border-gray-100`}>
                     <td className="py-1.5 px-4 pl-8 text-amber-600 text-xs">
                       ↳ Infants × {result.numInfants}
                     </td>
@@ -185,7 +186,7 @@ export default function PrintLayout({ state, result, currency }: Props) {
                     )}
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             ))}
 
             {/* Subtotals */}
