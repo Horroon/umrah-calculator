@@ -10,9 +10,9 @@ import { firebaseAuth } from "@/lib/firebase";
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<void>;
-  signInWithFacebook: () => Promise<void>;
-  signInWithMicrosoft: () => Promise<void>;
+  signInWithGoogle: () => Promise<unknown>;
+  signInWithFacebook: () => Promise<unknown>;
+  signInWithMicrosoft: () => Promise<unknown>;
   logout: () => Promise<void>;
 }
 
@@ -20,7 +20,6 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  console.log("AuthProvider rendered, user:", user);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,17 +27,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsub;
   }, []);
 
-  async function signInWithGoogle() {
-    await signInWithPopup(firebaseAuth(), new GoogleAuthProvider());
+  // Non-async so signInWithPopup is called in the same synchronous frame as the user click.
+  // Async wrappers add microtask boundaries that can clear the browser's user-gesture flag.
+  function signInWithGoogle() {
+    return signInWithPopup(firebaseAuth(), new GoogleAuthProvider());
   }
-  async function signInWithFacebook() {
-    await signInWithPopup(firebaseAuth(), new FacebookAuthProvider());
+  function signInWithFacebook() {
+    return signInWithPopup(firebaseAuth(), new FacebookAuthProvider());
   }
-  async function signInWithMicrosoft() {
-    await signInWithPopup(firebaseAuth(), new OAuthProvider("microsoft.com"));
+  function signInWithMicrosoft() {
+    return signInWithPopup(firebaseAuth(), new OAuthProvider("microsoft.com"));
   }
-  async function logout() {
-    await signOut(firebaseAuth());
+  function logout() {
+    return signOut(firebaseAuth());
   }
 
   return (

@@ -10,15 +10,17 @@ export default function LoginPage() {
   const [error, setError]     = useState("");
   const [loading, setLoading] = useState<string | null>(null);
 
-  async function handleLogin(provider: "google" | "facebook" | "microsoft") {
-    setError(""); setLoading(provider);
-    try {
-      if (provider === "google")    await signInWithGoogle();
-      if (provider === "facebook")  await signInWithFacebook();
-      if (provider === "microsoft") await signInWithMicrosoft();
-    } catch (e: unknown) {
+  function handleLogin(provider: "google" | "facebook" | "microsoft") {
+    setError("");
+    setLoading(provider);
+    const fn = provider === "google" ? signInWithGoogle
+      : provider === "facebook"  ? signInWithFacebook
+      : signInWithMicrosoft;
+    // Call fn() synchronously so signInWithPopup runs in the same user-gesture frame.
+    // Errors are handled via .catch instead of try/await to avoid extra async wrappers.
+    fn().catch((e: unknown) => {
       setError(e instanceof Error ? e.message : "Login failed. Please try again.");
-    } finally { setLoading(null); }
+    }).finally(() => setLoading(null));
   }
 
   return (
