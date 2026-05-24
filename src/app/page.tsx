@@ -119,6 +119,10 @@ function computeVisaFee(
 ): number {
   const tier = computeActiveTier(tiers, totalPax);
   if (!tier) return 0;
+  return tierToPKR(tier, currency, customRates);
+}
+
+function tierToPKR(tier: VisaTier, currency: Currency, customRates: Partial<Record<string, number>>): number {
   if (currency === "PKR") return tier.cost;
   const c = CURRENCIES.find(c => c.code === currency);
   if (!c) return tier.cost;
@@ -144,6 +148,7 @@ export default function Home() {
   const [state, setState]           = useState<CalculatorState>(DEFAULT_STATE);
   const [hotels, setHotels]         = useState<Hotel[]>([]);
   const [showHotelManager, setShowHotelManager] = useState(false);
+  const [manualTierId, setManualTierId] = useState<string | null>(null);
   const visaTiersLoaded = useRef(false);
 
   useEffect(() => {
@@ -187,18 +192,23 @@ export default function Home() {
     }));
   }, [hotels]);
 
-  // Keep visaFee in sync with tiers, pax count, currency, and exchange rates
+  // Keep visaFee in sync; respects manual tier selection, resets it when pax/currency change
   useEffect(() => {
-    const fee = computeVisaFee(state.visaTiers, state.numAdults + state.numInfants, state.currency, state.customRates);
+    const tier = manualTierId ? state.visaTiers.find(t => t.id === manualTierId) : null;
+    const fee  = tier
+      ? tierToPKR(tier, state.currency, state.customRates)
+      : computeVisaFee(state.visaTiers, state.numAdults + state.numInfants, state.currency, state.customRates);
     if (fee !== state.visaFee) setState(prev => ({ ...prev, visaFee: fee }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.numAdults, state.numInfants, state.visaTiers, state.currency, state.customRates]);
+  }, [manualTierId, state.numAdults, state.numInfants, state.visaTiers, state.currency, state.customRates]);
 
   function setField<K extends keyof CalculatorState>(key: K, value: CalculatorState[K]) {
     setState(prev => ({ ...prev, [key]: value, activePreset: null }));
   }
 
   function addTier() {
+    const sorted = [...state.visaTiers].sort((a, b) => a.minPax - b.minPax);
+    if (sorted.length > 0 && sorted[sorted.length - 1].cost === 0) return;
     const maxPax = state.visaTiers.reduce((m, t) => Math.max(m, t.minPax), 0);
     const next: VisaTier = { id: Date.now().toString(), minPax: maxPax + 1, cost: 0 };
     setField("visaTiers", [...state.visaTiers, next]);
@@ -213,7 +223,12 @@ export default function Home() {
   }
 
   function deleteTier(id: string) {
+    if (id === manualTierId) setManualTierId(null);
     setField("visaTiers", state.visaTiers.filter(t => t.id !== id));
+  }
+
+  function selectTier(id: string) {
+    setManualTierId(prev => prev === id ? null : id); // toggle off if already selected
   }
 
   function applyPreset(tier: PackageTier) {
@@ -380,10 +395,15 @@ export default function Home() {
 
           {/* Visa cost tiers */}
           {(() => {
-            const currencyMeta = CURRENCIES.find(c => c.code === state.currency)!;
-            const currSymbol   = currencyMeta.symbol;
-            const totalPax     = state.numAdults + state.numInfants;
-            const activeTier   = computeActiveTier(state.visaTiers, totalPax);
+            const currencyMeta  = CURRENCIES.find(c => c.code === state.currency)!;
+            const currSymbol    = currencyMeta.symbol;
+            const totalPax      = state.numAdults + state.numInfants;
+            const autoTier      = computeActiveTier(state.visaTiers, totalPax);
+            const selectedId    = manualTierId ?? autoTier?.id ?? null;
+            const selectedTier  = state.visaTiers.find(t => t.id === selectedId) ?? null;
+            const sortedTiers   = [...state.visaTiers].sort((a, b) => a.minPax - b.minPax);
+            const lastTier      = sortedTiers[sortedTiers.length - 1];
+            const canAddTier    = !lastTier || lastTier.cost > 0;
             return (
               <div>
                 <div className="flex items-center justify-between mb-2.5">
@@ -391,55 +411,74 @@ export default function Home() {
                     Visa Cost by Group Size
                   </span>
                   <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                    amounts in {currencyMeta.name} ({state.currency})
+                    in {currencyMeta.name} ({state.currency}) · click row to select
                   </span>
                 </div>
                 <div className="space-y-1.5">
-                  <div className="grid grid-cols-[88px_1fr_28px] gap-2 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide px-1 mb-1">
+                  <div className="grid grid-cols-[18px_88px_1fr_28px] gap-2 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide px-1 mb-1">
+                    <span />
                     <span>Min Pax</span>
                     <span>Per Person ({state.currency})</span>
                     <span />
                   </div>
-                  {[...state.visaTiers]
-                    .sort((a, b) => a.minPax - b.minPax)
-                    .map(tier => {
-                      const isActive = tier.id === activeTier?.id;
-                      return (
-                        <div key={tier.id}
-                          className={`grid grid-cols-[88px_1fr_28px] gap-2 items-center rounded-lg px-2 py-1.5 transition-colors
-                            ${isActive
-                              ? "bg-emerald-50 dark:bg-emerald-900/20 ring-1 ring-emerald-300 dark:ring-emerald-700"
-                              : "bg-gray-50 dark:bg-gray-700/50"}`}>
-                          <div className="flex items-center gap-1">
-                            <input type="number" min={1} max={50} value={tier.minPax}
-                              onChange={e => updateTier(tier.id, "minPax", Math.max(1, parseInt(e.target.value) || 1))}
-                              className="w-11 text-sm font-semibold text-center bg-transparent focus:outline-none text-gray-800 dark:text-gray-100" />
-                            <span className="text-xs text-gray-400 dark:text-gray-500">pax+</span>
-                          </div>
-                          <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-800 focus-within:ring-1 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700">
-                            <span className="pl-2 text-xs text-gray-400 dark:text-gray-500">{currSymbol}</span>
-                            <input type="number" min={0} step={state.currency === "PKR" ? 1000 : 1} value={tier.cost}
-                              onChange={e => updateTier(tier.id, "cost", Math.max(0, parseFloat(e.target.value) || 0))}
-                              className="flex-1 px-1.5 py-1.5 text-sm bg-transparent focus:outline-none text-gray-800 dark:text-gray-100 min-w-0" />
-                          </div>
-                          <button onClick={() => deleteTier(tier.id)} disabled={state.visaTiers.length <= 1}
-                            className="w-7 h-7 rounded-lg text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30 flex items-center justify-center transition-colors text-base leading-none">
-                            ×
-                          </button>
+                  {sortedTiers.map(tier => {
+                    const isSelected = tier.id === selectedId;
+                    return (
+                      <div key={tier.id}
+                        onClick={() => selectTier(tier.id)}
+                        className={`grid grid-cols-[18px_88px_1fr_28px] gap-2 items-center rounded-lg px-2 py-1.5 transition-colors cursor-pointer
+                          ${isSelected
+                            ? "bg-emerald-50 dark:bg-emerald-900/20 ring-1 ring-emerald-300 dark:ring-emerald-700"
+                            : "bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700"}`}>
+
+                        {/* Radio indicator */}
+                        <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors
+                          ${isSelected ? "border-emerald-500 bg-emerald-500" : "border-gray-300 dark:border-gray-500"}`}>
+                          {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                         </div>
-                      );
-                    })}
-                  <button onClick={addTier}
-                    className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline mt-0.5 ml-1">
+
+                        {/* Min pax */}
+                        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                          <input type="number" min={1} max={50} value={tier.minPax}
+                            onChange={e => updateTier(tier.id, "minPax", Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-11 text-sm font-semibold text-center bg-transparent focus:outline-none text-gray-800 dark:text-gray-100" />
+                          <span className="text-xs text-gray-400 dark:text-gray-500">pax+</span>
+                        </div>
+
+                        {/* Cost */}
+                        <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-800 focus-within:ring-1 focus-within:ring-emerald-300 dark:focus-within:ring-emerald-700"
+                          onClick={e => e.stopPropagation()}>
+                          <span className="pl-2 text-xs text-gray-400 dark:text-gray-500">{currSymbol}</span>
+                          <input type="number" min={0} step={state.currency === "PKR" ? 1000 : 1} value={tier.cost}
+                            onChange={e => updateTier(tier.id, "cost", Math.max(0, parseFloat(e.target.value) || 0))}
+                            className="flex-1 px-1.5 py-1.5 text-sm bg-transparent focus:outline-none text-gray-800 dark:text-gray-100 min-w-0" />
+                        </div>
+
+                        {/* Delete */}
+                        <button
+                          onClick={e => { e.stopPropagation(); deleteTier(tier.id); }}
+                          disabled={state.visaTiers.length <= 1}
+                          className="w-7 h-7 rounded-lg text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30 flex items-center justify-center transition-colors text-base leading-none">
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <button onClick={addTier} disabled={!canAddTier}
+                    title={!canAddTier ? "Enter a cost for the current tier first" : undefined}
+                    className={`flex items-center gap-1 text-xs font-medium mt-0.5 ml-1 transition-colors
+                      ${canAddTier
+                        ? "text-emerald-600 dark:text-emerald-400 hover:underline"
+                        : "text-gray-300 dark:text-gray-600 cursor-not-allowed"}`}>
                     <Plus size={11} /> Add tier
                   </button>
                 </div>
-                {activeTier && (
+                {selectedTier && (
                   <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
-                    {totalPax} pax → {currSymbol}{activeTier.cost.toLocaleString()} per person
+                    {manualTierId ? "Manual" : `${totalPax} pax`} → {currSymbol}{selectedTier.cost.toLocaleString()} per person
                     {state.currency !== "PKR" && currentPkrPerForeign !== null && (
                       <span className="text-gray-400 dark:text-gray-500 ml-1">
-                        (≈ ₨{(activeTier.cost * currentPkrPerForeign).toLocaleString()} PKR)
+                        (≈ ₨{(selectedTier.cost * currentPkrPerForeign).toLocaleString()} PKR)
                       </span>
                     )}
                   </p>
