@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import type { Hotel, HotelCity, SharingType } from "@/types";
+import type { Hotel, HotelCity, SharingType, Currency } from "@/types";
 import { getHotelPrice } from "@/lib/calculator";
+import { CURRENCIES } from "@/data/packages";
 import { Star, Bus, MapPin, Check, Building2, SlidersHorizontal } from "lucide-react";
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
   selectedHotelId: string;
   selectedSharingType: SharingType;
   shuttleEnabled: boolean;
+  currency: Currency;
   onHotelChange: (id: string) => void;
   onSharingTypeChange: (t: SharingType) => void;
   onShuttleChange: (enabled: boolean) => void;
@@ -18,10 +20,6 @@ interface Props {
 }
 
 const SHARING_TYPES: SharingType[] = ["DUBL", "TRPL", "QUAD", "SHARING"];
-
-function fmt(n: number) {
-  return "₨" + new Intl.NumberFormat("en-US").format(n);
-}
 
 function StarRow({ count }: { count: number }) {
   return (
@@ -37,8 +35,13 @@ function StarRow({ count }: { count: number }) {
 
 export default function HotelPicker({
   hotels, selectedHotelId, selectedSharingType, shuttleEnabled,
+  currency,
   onHotelChange, onSharingTypeChange, onShuttleChange, onManageHotels,
 }: Props) {
+  function fmt(amount: number) {
+    const symbol = CURRENCIES.find(c => c.code === currency)?.symbol ?? "";
+    return symbol + new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount);
+  }
   const [filterMaxDist, setFilterMaxDist] = useState<number | null>(null);
   const [showFilters, setShowFilters]     = useState(false);
 

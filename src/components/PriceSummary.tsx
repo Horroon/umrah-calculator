@@ -74,25 +74,29 @@ export default function PriceSummary({ result }: Props) {
 
       <div className="p-4 sm:p-6 space-y-2.5">
         {/* Breakdown rows */}
-        {result.breakdown.map((item) => {
-          const totalPKR = item.adultAmountPKR + item.infantAmountPKR;
-          return (
-            <div key={item.label} className="flex justify-between items-start gap-3 text-sm">
-              <div className="min-w-0 flex-1">
-                <span className="text-gray-600 dark:text-gray-400 leading-snug">{item.label}</span>
-                {showInfants && item.infantAmountPKR > 0 && (
-                  <div className="flex items-center gap-1 mt-0.5 text-xs text-amber-600 dark:text-amber-400">
-                    <Baby size={10} />
-                    <span>+{fmt(item.infantAmountPKR)} infants</span>
-                  </div>
-                )}
-              </div>
-              <div className="font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap shrink-0">
-                {fmt(totalPKR)}
-              </div>
+        {result.breakdown.map((item) => (
+          <div key={item.label} className="flex justify-between items-start gap-3 text-sm">
+            <div className="min-w-0 flex-1">
+              <span className="text-gray-600 dark:text-gray-400 leading-snug">{item.label}</span>
+              {showInfants && item.infantAmountPKR > 0 && (
+                <div className="flex items-center gap-1 mt-0.5 text-xs text-amber-600 dark:text-amber-400">
+                  <Baby size={10} />
+                  <span>{result.numInfants} infant{result.numInfants !== 1 ? "s" : ""}</span>
+                </div>
+              )}
             </div>
-          );
-        })}
+            <div className="text-right shrink-0">
+              <div className="font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                {fmt(item.adultAmountPKR)}
+              </div>
+              {showInfants && item.infantAmountPKR > 0 && (
+                <div className="font-medium text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                  {fmt(item.infantAmountPKR)}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
 
         {/* Subtotals */}
         <div className="border-t border-gray-100 dark:border-gray-700 pt-3 space-y-2">

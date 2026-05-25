@@ -273,20 +273,6 @@ export default function Home() {
     setManualTierId(prev => prev === id ? null : id); // toggle off if already selected
   }
 
-  function applyPreset(tier: PackageTier) {
-    const preset = PACKAGE_PRESETS.find(p => p.tier === tier)!;
-    setState(prev => ({
-      ...prev,
-      flightClass:   preset.flightClass,
-      nightsMakkah:  preset.nightsMakkah,
-      nightsMadinah: preset.nightsMadinah,
-      visaFee:       preset.visaFee,
-      serviceFee:    preset.serviceFee,
-      insuranceFee:  preset.insuranceFee,
-      ziyaratFee:    preset.ziyaratFee,
-      activePreset:  tier,
-    }));
-  }
 
   const result = useMemo(() => calculate(state, hotels, flights), [state, hotels, flights]);
 
@@ -605,6 +591,7 @@ export default function Home() {
               selectedHotelId={state.makkahHotelId}
               selectedSharingType={state.makkahSharingType}
               shuttleEnabled={state.shuttleMakkah}
+              currency={state.currency}
               onHotelChange={id => setField("makkahHotelId", id)}
               onSharingTypeChange={t => setField("makkahSharingType", t)}
               onShuttleChange={v => setField("shuttleMakkah", v)}
@@ -615,6 +602,7 @@ export default function Home() {
               selectedHotelId={state.madinahHotelId}
               selectedSharingType={state.madinahSharingType}
               shuttleEnabled={state.shuttleMadinah}
+              currency={state.currency}
               onHotelChange={id => setField("madinahHotelId", id)}
               onSharingTypeChange={t => setField("madinahSharingType", t)}
               onShuttleChange={v => setField("shuttleMadinah", v)}

@@ -78,14 +78,15 @@ export function calculate(state: CalculatorState, hotels: Hotel[], flights: Flig
     ? `Hotel Madinah – ${dHotel.name} (${nightsMadinah}N · ${madinahSharingType}${dHotel.shuttle ? " · shuttle ✓" : ""})`
     : `Hotel Madinah (${nightsMadinah}N)`;
 
-  const infantFlight  = flightFare * INFANT_FLIGHT_RATIO;
   const infantService = serviceFee * INFANT_SERVICE_RATIO;
+
+  console.log('visa fee ', visaFee)
 
   const breakdown = [
     {
       label: flightLabel,
-      adultAmountPKR:  flightFare   * numAdults,
-      infantAmountPKR: infantFlight * numInfants,
+      adultAmountPKR:  flightFare,
+      infantAmountPKR: 0,
     },
     {
       label: makkahLabel,
@@ -99,13 +100,13 @@ export function calculate(state: CalculatorState, hotels: Hotel[], flights: Flig
     },
     {
       label: "Umrah Visa Fee",
-      adultAmountPKR:  visaFee    * numAdults,
-      infantAmountPKR: visaFee    * numInfants,
+      adultAmountPKR:  visaFee,
+      infantAmountPKR: 0,
     },
     {
       label: "Service & Handling Charges",
-      adultAmountPKR:  serviceFee    * numAdults,
-      infantAmountPKR: infantService * numInfants,
+      adultAmountPKR:  serviceFee  ,
+      infantAmountPKR: infantCharges,
     },
     ...(insuranceFee > 0 ? [{
       label: "Travel Insurance",
@@ -131,18 +132,19 @@ export function calculate(state: CalculatorState, hotels: Hotel[], flights: Flig
   const totalPersons  = numAdults + numInfants;
   const groupDiscount = [...GROUP_DISCOUNTS].reverse().find((d) => totalPersons >= d.minPersons)!;
   const discountPKR   = subtotalPKR * groupDiscount.discount;
-  const totalPKR      = subtotalPKR - discountPKR;
+  const totalPKR      =  numAdults > 0 ? adultSubtotalPKR * numAdults + infantSubtotalPKR * numInfants : 0;
+  const totalPerAdultPKR = adultSubtotalPKR  + infantSubtotalPKR ;
 
   return {
-    breakdown,
     adultSubtotalPKR,
     infantSubtotalPKR,
     subtotalPKR,
+    breakdown,
     discountPKR,
-    totalPKR,
-    totalPerAdultPKR: numAdults > 0 ? (adultSubtotalPKR * (1 - groupDiscount.discount)) / numAdults : 0,
     discountLabel: groupDiscount.label,
     numAdults,
     numInfants,
+    totalPerAdultPKR,
+    totalPKR,
   };
 }
