@@ -3,7 +3,7 @@
 import React from "react";
 import type { CalculatorState, CalculationResult, Hotel, Flight } from "@/types";
 import { getHotelById, getHotelPrice, getFlightById, formatCurrency } from "@/lib/calculator";
-import { PACKAGE_PRESETS } from "@/data/packages";
+import { PACKAGE_PRESETS, CURRENCIES } from "@/data/packages";
 import Logo from "@/components/Logo";
 
 interface Props {
@@ -31,6 +31,10 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
 }
 
 export default function PrintLayout({ state, result, hotels, flights }: Props) {
+  const currencySymbol = CURRENCIES.find(c => c.code === state.currency)?.symbol ?? "";
+  function fmtHotel(amount: number) {
+    return currencySymbol + new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount);
+  }
   const makkahHotel   = getHotelById(state.makkahHotelId, hotels);
   const madinahHotel  = getHotelById(state.madinahHotelId, hotels);
   const selectedFlight = getFlightById(state.selectedFlightId, flights);
@@ -116,7 +120,7 @@ export default function PrintLayout({ state, result, hotels, flights }: Props) {
                     <tr>
                       <td className="pr-3 py-0.5 text-gray-400">Rate/night</td>
                       <td className="font-medium">
-                        {fmtPKR(getHotelPrice(makkahHotel, state.makkahSharingType))}
+                        {fmtHotel(getHotelPrice(makkahHotel, state.makkahSharingType))}
                         <span className="text-gray-400 font-normal"> /person</span>
                       </td>
                     </tr>
@@ -147,7 +151,7 @@ export default function PrintLayout({ state, result, hotels, flights }: Props) {
                     <tr>
                       <td className="pr-3 py-0.5 text-gray-400">Rate/night</td>
                       <td className="font-medium">
-                        {fmtPKR(getHotelPrice(madinahHotel, state.madinahSharingType))}
+                        {fmtHotel(getHotelPrice(madinahHotel, state.madinahSharingType))}
                         <span className="text-gray-400 font-normal"> /person</span>
                       </td>
                     </tr>
