@@ -35,16 +35,15 @@ export default function PrintLayout({ state, result, hotels, flights }: Props) {
   function fmtHotel(amount: number) {
     return currencySymbol + new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount);
   }
-  const makkahHotel   = getHotelById(state.makkahHotelId, hotels);
-  const madinahHotel  = getHotelById(state.madinahHotelId, hotels);
+  const makkahHotel = getHotelById(state.makkahHotelId, hotels);
+  const madinahHotel = getHotelById(state.madinahHotelId, hotels);
   const selectedFlight = getFlightById(state.selectedFlightId, flights);
-  const preset       = PACKAGE_PRESETS.find((p) => p.tier === state.activePreset);
-  const today        = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-  const totalNights  = state.nightsMakkah + state.nightsMadinah;
+  const preset = PACKAGE_PRESETS.find((p) => p.tier === state.activePreset);
+  const today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const totalNights = state.nightsMakkah + state.nightsMadinah;
 
   return (
     <div className="print-layout hidden bg-white text-gray-900 text-sm font-sans p-8 max-w-3xl mx-auto">
-
       {/* Document header */}
       <div className="flex items-center justify-between mb-6 pb-5 border-b-2 border-emerald-700">
         <div className="flex items-center gap-3">
@@ -76,21 +75,21 @@ export default function PrintLayout({ state, result, hotels, flights }: Props) {
           <tbody>
             {selectedFlight ? (
               <>
-                <Row label="Flight Code"  value={selectedFlight.flyCode} />
-                <Row label="Route"        value={`${selectedFlight.departureCity} → ${selectedFlight.destinationCity}`} />
+                <Row label="Flight Code" value={selectedFlight.flyCode} />
+                <Row label="Route" value={`${selectedFlight.departureCity} → ${selectedFlight.destinationCity}`} />
               </>
             ) : (
               <>
-                <Row label="Departure City"  value={state.departureCity} />
-                <Row label="Flight Class"    value={state.flightClass === "economy" ? "Economy" : "Business"} />
+                <Row label="Departure City" value={state.departureCity} />
+                <Row label="Flight Class" value={state.flightClass === "economy" ? "Economy" : "Business"} />
               </>
             )}
-            <Row label="Air Ticket"   value="Included" />
-            <Row label="Visa"         value="Included" />
+            <Row label="Air Ticket" value="Included" />
+            <Row label="Visa" value="Included" />
             <Row label="Travellers"
               value={`${result.numAdults} Adult${result.numAdults !== 1 ? "s" : ""}${result.numInfants > 0 ? ` · ${result.numInfants} Infant${result.numInfants !== 1 ? "s" : ""} (under 2)` : ""}`}
             />
-            <Row label="Total Duration"  value={`${totalNights} Nights  (${state.nightsMakkah}N Makkah · ${state.nightsMadinah}N Madinah)`} />
+            <Row label="Total Duration" value={`${totalNights} Nights  (${state.nightsMakkah}N Makkah · ${state.nightsMadinah}N Madinah)`} />
           </tbody>
         </table>
       </div>
@@ -156,26 +155,27 @@ export default function PrintLayout({ state, result, hotels, flights }: Props) {
         </div>
       </div>
 
-      {/* Price breakdown */}
+      {/* Service breakdown */}
       <div className="mb-6">
-        <div className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-2">Price Breakdown</div>
+        <div className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-2">Services Included In Package</div>
         <table className="w-full text-sm border border-gray-200 rounded-xl overflow-hidden">
           <thead>
             <tr className="bg-emerald-700 text-white">
               <th className="text-left py-2 px-4 font-semibold">Description</th>
-              <th className="text-right py-2 px-4 font-semibold whitespace-nowrap">PKR</th>
+              <th className="text-right py-2 px-4 font-semibold whitespace-nowrap" />
             </tr>
           </thead>
           <tbody>
             {result.breakdown.map((item, idx) => (
               <React.Fragment key={item.label}>
-                <tr className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                  <td className="py-2 px-4 text-gray-700">
+                <tr className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} w-full`}>
+                  <td className="py-2 px-4 text-gray-700 w-auto">
                     {item.label}
                     {result.numAdults > 1 && (
                       <span className="text-gray-400 text-xs ml-1">× {result.numAdults} adults</span>
                     )}
                   </td>
+                  <td />
                 </tr>
               </React.Fragment>
             ))}
@@ -192,10 +192,7 @@ export default function PrintLayout({ state, result, hotels, flights }: Props) {
       <div className="pt-4 border-t border-gray-200 text-xs text-gray-400 space-y-1">
         <p>• Prices are indicative estimates based on current market rates and may vary at time of booking.</p>
         <p>• Hotel rates are per person per night.</p>
-        <p>• All amounts are in Pakistani Rupees (PKR). Visa costs are converted from the rate entered by the user.</p>
-        <p>• This estimate does not constitute a confirmed booking. Contact your travel agent to confirm.</p>
       </div>
-
     </div>
   );
 }
