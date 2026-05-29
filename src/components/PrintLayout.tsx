@@ -78,17 +78,15 @@ export default function PrintLayout({ state, result, hotels, flights }: Props) {
               <>
                 <Row label="Flight Code"  value={selectedFlight.flyCode} />
                 <Row label="Route"        value={`${selectedFlight.departureCity} → ${selectedFlight.destinationCity}`} />
-                <Row label="Charges"      value={`${fmtPKR(selectedFlight.charges)} per person`} />
               </>
             ) : (
               <>
                 <Row label="Departure City"  value={state.departureCity} />
-                <Row
-                  label="Flight Class"
-                  value={`${state.flightClass === "economy" ? "Economy" : "Business"} · ${fmtPKR(state.flightClass === "economy" ? state.economyFare : state.businessFare)} per person`}
-                />
+                <Row label="Flight Class"    value={state.flightClass === "economy" ? "Economy" : "Business"} />
               </>
             )}
+            <Row label="Air Ticket"   value="Included" />
+            <Row label="Visa"         value="Included" />
             <Row label="Travellers"
               value={`${result.numAdults} Adult${result.numAdults !== 1 ? "s" : ""}${result.numInfants > 0 ? ` · ${result.numInfants} Infant${result.numInfants !== 1 ? "s" : ""} (under 2)` : ""}`}
             />
@@ -117,13 +115,13 @@ export default function PrintLayout({ state, result, hotels, flights }: Props) {
                       <td className="pr-3 py-0.5 text-gray-400">Shuttle</td>
                       <td>{makkahHotel.shuttle ? "✓ Available" : "✗ Not available"}</td>
                     </tr>
-                    <tr>
+                    {/* <tr>
                       <td className="pr-3 py-0.5 text-gray-400">Rate/night</td>
                       <td className="font-medium">
                         {fmtHotel(getHotelPrice(makkahHotel, state.makkahSharingType))}
                         <span className="text-gray-400 font-normal"> /person</span>
                       </td>
-                    </tr>
+                    </tr> */}
                   </tbody>
                 </table>
               </>
@@ -147,13 +145,6 @@ export default function PrintLayout({ state, result, hotels, flights }: Props) {
                     <tr>
                       <td className="pr-3 py-0.5 text-gray-400">Shuttle</td>
                       <td>{madinahHotel.shuttle ? "✓ Available" : "✗ Not available"}</td>
-                    </tr>
-                    <tr>
-                      <td className="pr-3 py-0.5 text-gray-400">Rate/night</td>
-                      <td className="font-medium">
-                        {fmtHotel(getHotelPrice(madinahHotel, state.madinahSharingType))}
-                        <span className="text-gray-400 font-normal"> /person</span>
-                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -185,45 +176,12 @@ export default function PrintLayout({ state, result, hotels, flights }: Props) {
                       <span className="text-gray-400 text-xs ml-1">× {result.numAdults} adults</span>
                     )}
                   </td>
-                  <td className="py-2 px-4 text-right font-medium whitespace-nowrap">
-                    {fmtPKR(item.adultAmountPKR)}
-                  </td>
                 </tr>
-                {result.numInfants > 0 && item.infantAmountPKR > 0 && (
-                  <tr className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} border-t border-dashed border-gray-100`}>
-                    <td className="py-1.5 px-4 pl-8 text-amber-600 text-xs">
-                      ↳ Infants × {result.numInfants}
-                    </td>
-                    <td className="py-1.5 px-4 text-right text-amber-600 text-xs whitespace-nowrap">
-                      {fmtPKR(item.infantAmountPKR)}
-                    </td>
-                  </tr>
-                )}
               </React.Fragment>
             ))}
-
-            <tr className="border-t-2 border-gray-300 bg-gray-50">
-              <td className="py-2 px-4 text-gray-500">Subtotal ({result.numAdults + result.numInfants} pax)</td>
-              <td className="py-2 px-4 text-right font-medium whitespace-nowrap">{fmtPKR(result.subtotalPKR)}</td>
-            </tr>
-
-            {result.discountPKR > 0 && (
-              <tr className="bg-emerald-50">
-                <td className="py-2 px-4 text-emerald-700">Group Discount ({result.discountLabel})</td>
-                <td className="py-2 px-4 text-right font-medium text-emerald-700 whitespace-nowrap">
-                  − {fmtPKR(result.discountPKR)}
-                </td>
-              </tr>
-            )}
-
             <tr className="bg-emerald-700 text-white">
-              <td className="py-3 px-4 font-bold text-base">TOTAL PACKAGE COST</td>
-              <td className="py-3 px-4 text-right font-bold text-base whitespace-nowrap">{fmtPKR(result.totalPKR)}</td>
-            </tr>
-
-            <tr className="bg-emerald-50 border-t border-emerald-200">
-              <td className="py-2 px-4 text-emerald-800 font-medium">Per Adult</td>
-              <td className="py-2 px-4 text-right font-bold text-emerald-700 whitespace-nowrap">{fmtPKR(result.totalPerAdultPKR)}</td>
+              <td className="py-3 px-4 font-bold text-base">Per Adult</td>
+              <td className="py-3 px-4 text-right font-bold text-base whitespace-nowrap">{fmtPKR(result.subtotalPKR)}</td>
             </tr>
           </tbody>
         </table>
