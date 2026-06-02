@@ -12,7 +12,8 @@ import Logo from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
 import HotelPicker from "@/components/HotelPicker";
 import FeeInputs from "@/components/FeeInputs";
-import PrintLayout from "@/components/PrintLayout";
+import PrintLayoutWithPrices from "@/components/PrintLayoutWithPrices";
+import PrintLayoutClient from "@/components/PrintLayoutClient";
 import LoginPage from "@/components/LoginPage";
 import HotelManager from "@/components/HotelManager";
 import FlightManager from "@/components/FlightManager";
@@ -155,8 +156,15 @@ export default function Home() {
   const [showHotelManager, setShowHotelManager]   = useState(false);
   const [showFlightManager, setShowFlightManager] = useState(false);
   const [manualTierId, setManualTierId] = useState<string | null>(null);
+  const [printMode, setPrintMode] = useState<"with-prices" | "client" | null>(null);
   const visaTiersLoaded   = useRef(false);
   const customRatesLoaded = useRef(false);
+
+  useEffect(() => {
+    if (!printMode) return;
+    window.addEventListener("afterprint", () => setPrintMode(null), { once: true });
+    window.print();
+  }, [printMode]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -633,7 +641,7 @@ export default function Home() {
           <h2 className="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 no-print">
             5. Your Estimate
           </h2>
-          <PriceSummary result={result} />
+          <PriceSummary result={result} onPrint={setPrintMode} />
         </section>
 
         <footer className="no-print text-center text-xs text-gray-400 dark:text-gray-500 pb-6 sm:pb-8">
@@ -641,7 +649,10 @@ export default function Home() {
         </footer>
       </div>
 
-      <PrintLayout state={state} result={result} hotels={hotels} flights={flights} />
+      {printMode && (printMode === "with-prices"
+        ? <PrintLayoutWithPrices state={state} result={result} hotels={hotels} flights={flights} />
+        : <PrintLayoutClient state={state} result={result} hotels={hotels} flights={flights} />
+      )}
     </main>
   );
 }
