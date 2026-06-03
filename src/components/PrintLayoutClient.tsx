@@ -53,13 +53,16 @@ export default function PrintLayoutClient({ state, result, hotels, flights }: Pr
         <div className="text-right text-xs text-gray-400">
           <div className="font-medium text-gray-600">Date Prepared</div>
           <div>{today}</div>
-          {preset && (
-            <div className="mt-1">
+          <div className="flex gap-1 mt-1 justify-end">
+            {preset && (
               <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide text-[10px]">
                 {preset.label} Package
               </span>
-            </div>
-          )}
+            )}
+            <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide text-[10px]">
+              Client Copy
+            </span>
+          </div>
         </div>
       </div>
 

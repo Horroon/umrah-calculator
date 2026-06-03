@@ -156,15 +156,11 @@ export default function Home() {
   const [showHotelManager, setShowHotelManager]   = useState(false);
   const [showFlightManager, setShowFlightManager] = useState(false);
   const [manualTierId, setManualTierId] = useState<string | null>(null);
-  const [printMode, setPrintMode] = useState<"with-prices" | "client" | null>(null);
+  const [generating, setGenerating] = useState(false);
   const visaTiersLoaded   = useRef(false);
   const customRatesLoaded = useRef(false);
-
-  useEffect(() => {
-    if (!printMode) return;
-    window.addEventListener("afterprint", () => setPrintMode(null), { once: true });
-    window.print();
-  }, [printMode]);
+  const withPricesRef = useRef<HTMLDivElement>(null);
+  const clientRef     = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -254,6 +250,40 @@ export default function Home() {
 
   function setField<K extends keyof CalculatorState>(key: K, value: CalculatorState[K]) {
     setState(prev => ({ ...prev, [key]: value, activePreset: null }));
+  }
+
+  async function downloadPDFs() {
+    if (!withPricesRef.current || !clientRef.current) return;
+    setGenerating(true);
+    try {
+      const { toPng } = await import('html-to-image');
+      const { default: jsPDF } = await import('jspdf');
+
+      async function elToBlob(el: HTMLElement): Promise<Blob> {
+        const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true });
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        const pdfW = pdf.internal.pageSize.getWidth();
+        const pdfH = pdf.internal.pageSize.getHeight();
+        const props = pdf.getImageProperties(dataUrl);
+        const scale = Math.min(pdfW / props.width, pdfH / props.height);
+        pdf.addImage(dataUrl, 'PNG', 0, 0, props.width * scale, props.height * scale);
+        return pdf.output('blob');
+      }
+
+      const blob1 = await elToBlob(withPricesRef.current);
+      const blob2 = await elToBlob(clientRef.current);
+
+      for (const [blob, name] of [[blob1, 'system-copy.pdf'], [blob2, 'client-copy.pdf']] as [Blob, string][]) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = name;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } finally {
+      setGenerating(false);
+    }
   }
 
   function addTier() {
@@ -641,7 +671,7 @@ export default function Home() {
           <h2 className="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 no-print">
             5. Your Estimate
           </h2>
-          <PriceSummary result={result} onPrint={setPrintMode} />
+          <PriceSummary result={result} onPrint={downloadPDFs} generating={generating} />
         </section>
 
         <footer className="no-print text-center text-xs text-gray-400 dark:text-gray-500 pb-6 sm:pb-8">
@@ -649,10 +679,15 @@ export default function Home() {
         </footer>
       </div>
 
-      {printMode && (printMode === "with-prices"
-        ? <PrintLayoutWithPrices state={state} result={result} hotels={hotels} flights={flights} />
-        : <PrintLayoutClient state={state} result={result} hotels={hotels} flights={flights} />
-      )}
+      {/* Off-screen layouts used for PDF generation */}
+      <div style={{ position: 'fixed', left: '-9999px', top: 0, width: '794px', pointerEvents: 'none', zIndex: -1 }} aria-hidden="true">
+        <div ref={withPricesRef}>
+          <PrintLayoutWithPrices state={state} result={result} hotels={hotels} flights={flights} />
+        </div>
+        <div ref={clientRef}>
+          <PrintLayoutClient state={state} result={result} hotels={hotels} flights={flights} />
+        </div>
+      </div>
     </main>
   );
 }

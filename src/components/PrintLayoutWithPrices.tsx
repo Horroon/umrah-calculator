@@ -61,7 +61,7 @@ export default function PrintLayoutWithPrices({ state, result, hotels, flights }
               </span>
             )}
             <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide text-[10px]">
-              Internal
+              System Copy
             </span>
           </div>
         </div>
