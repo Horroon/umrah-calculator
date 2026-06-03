@@ -1,4 +1,4 @@
-import { FLIGHT_OPTIONS, GROUP_DISCOUNTS, CURRENCIES } from "@/data/packages";
+import { FLIGHT_OPTIONS, CURRENCIES } from "@/data/packages";
 import type { CalculatorState, CalculationResult, Currency, Hotel, Flight, SharingType } from "@/types";
 
 const INFANT_FLIGHT_RATIO  = 0.10;
@@ -80,8 +80,6 @@ export function calculate(state: CalculatorState, hotels: Hotel[], flights: Flig
 
   const infantService = serviceFee * INFANT_SERVICE_RATIO;
 
-  console.log('visa fee ', visaFee)
-
   const breakdown = [
     {
       label: flightLabel,
@@ -105,8 +103,8 @@ export function calculate(state: CalculatorState, hotels: Hotel[], flights: Flig
     },
     {
       label: "Service & Handling Charges",
-      adultAmountPKR:  serviceFee  ,
-      infantAmountPKR: infantCharges,
+      adultAmountPKR:  serviceFee,
+      infantAmountPKR: 0,
     },
     ...(insuranceFee > 0 ? [{
       label: "Travel Insurance",
@@ -125,23 +123,18 @@ export function calculate(state: CalculatorState, hotels: Hotel[], flights: Flig
     }] : []),
   ];
 
-  const adultSubtotalPKR  = breakdown.reduce((s, r) => s + r.adultAmountPKR,  0);
-  const infantSubtotalPKR = breakdown.reduce((s, r) => s + r.infantAmountPKR, 0);
-  const subtotalPKR       = adultSubtotalPKR + infantSubtotalPKR;
+  const adultSubtotalPKR  = breakdown.reduce((s, r) => s + r.adultAmountPKR, 0);
+  const infantSubtotalPKR = numInfants > 0 ? infantCharges * numInfants : 0;
+  const subtotalPKR       = adultSubtotalPKR * numAdults;
 
-  const totalPersons  = numAdults + numInfants;
-  const groupDiscount = [...GROUP_DISCOUNTS].reverse().find((d) => totalPersons >= d.minPersons)!;
-  const discountPKR   = subtotalPKR * groupDiscount.discount;
-  const totalPKR      =  numAdults > 0 ? adultSubtotalPKR * numAdults + infantSubtotalPKR * numInfants : 0;
-  const totalPerAdultPKR = adultSubtotalPKR  + infantSubtotalPKR ;
+  const totalPKR      = numAdults > 0 ? subtotalPKR + infantSubtotalPKR : 0;
+  const totalPerAdultPKR = adultSubtotalPKR;
 
   return {
     adultSubtotalPKR,
     infantSubtotalPKR,
     subtotalPKR,
     breakdown,
-    discountPKR,
-    discountLabel: groupDiscount.label,
     numAdults,
     numInfants,
     totalPerAdultPKR,

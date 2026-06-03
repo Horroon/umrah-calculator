@@ -48,9 +48,3 @@ export const CURRENCIES: { code: Currency; symbol: string; name: string; rate: n
   { code: "AED", symbol: "د.إ", name: "UAE Dirham",      rate: 0.0132  },
 ];
 
-export const GROUP_DISCOUNTS = [
-  { minPersons: 1,  discount: 0,    label: "No discount" },
-  { minPersons: 5,  discount: 0.05, label: "5% off"      },
-  { minPersons: 10, discount: 0.10, label: "10% off"     },
-  { minPersons: 20, discount: 0.15, label: "15% off"     },
-];

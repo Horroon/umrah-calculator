@@ -94,10 +94,8 @@ export interface CalculationResult {
   adultSubtotalPKR: number;
   infantSubtotalPKR: number;
   subtotalPKR: number;
-  discountPKR: number;
   totalPKR: number;
   totalPerAdultPKR: number;
-  discountLabel: string;
   numAdults: number;
   numInfants: number;
 }

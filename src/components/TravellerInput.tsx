@@ -40,27 +40,22 @@ function Stepper({
 }
 
 export default function TravellerInput({ numAdults, numInfants, onAdultsChange, onInfantsChange }: Props) {
-  function handleAdultsChange(n: number) {
-    onAdultsChange(n);
-    if (numInfants > n) onInfantsChange(n);
-  }
-
   return (
     <div className="space-y-4">
       <Stepper
         label="Adults" sublabel="Age 2 and above"
         value={numAdults} min={1} max={50}
-        onChange={handleAdultsChange}
+        onChange={onAdultsChange}
       />
       <Stepper
-        label="Infants" sublabel="Under 2 yrs · cannot exceed adults"
-        value={numInfants} min={0} max={numAdults}
+        label="Infants" sublabel="Under 2 yrs"
+        value={numInfants} min={0} max={50}
         onChange={onInfantsChange}
       />
       {numInfants > 0 && (
         <div className="flex gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-xs text-amber-700 dark:text-amber-400">
           <Info size={13} className="shrink-0 mt-0.5" />
-          <span>Infants: 10% flight fare · free hotel · same visa cost · 50% service fee · no insurance or ziyarat</span>
+          <span>Infant charges are a flat fee (set in Duration &amp; Fees) added on top of the adult package total. Infants do not affect visa tier selection.</span>
         </div>
       )}
     </div>

@@ -62,7 +62,7 @@ function parseState(p: URLSearchParams): CalculatorState {
   const ef = parseInt(p.get("ef") ?? ""); if (!isNaN(ef) && ef > 0) s.economyFare  = ef;
   const bf = parseInt(p.get("bf") ?? ""); if (!isNaN(bf) && bf > 0) s.businessFare = bf;
   const a = parseInt(p.get("a") ?? "");  if (!isNaN(a)  && a >= 1 && a <= 50) s.numAdults  = a;
-  const i = parseInt(p.get("i") ?? "");  if (!isNaN(i)  && i >= 0 && i <= 10) s.numInfants = Math.min(i, s.numAdults);
+  const i = parseInt(p.get("i") ?? "");  if (!isNaN(i)  && i >= 0 && i <= 50) s.numInfants = i;
   const mh = p.get("mh"); if (mh) s.makkahHotelId  = mh;
   const dh = p.get("dh"); if (dh) s.madinahHotelId = dh;
   const mst = p.get("mst") as SharingType; if (mst && VALID_SHARING.includes(mst)) s.makkahSharingType  = mst;
@@ -247,10 +247,10 @@ export default function Home() {
     const tier = manualTierId ? state.visaTiers.find(t => t.id === manualTierId) : null;
     const fee  = tier
       ? tierToPKR(tier, state.currency, state.customRates)
-      : computeVisaFee(state.visaTiers, state.numAdults + state.numInfants, state.currency, state.customRates);
+      : computeVisaFee(state.visaTiers, state.numAdults, state.currency, state.customRates);
     if (fee !== state.visaFee) setState(prev => ({ ...prev, visaFee: fee }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [manualTierId, state.numAdults, state.numInfants, state.visaTiers, state.currency, state.customRates]);
+  }, [manualTierId, state.numAdults, state.visaTiers, state.currency, state.customRates]);
 
   function setField<K extends keyof CalculatorState>(key: K, value: CalculatorState[K]) {
     setState(prev => ({ ...prev, [key]: value, activePreset: null }));
@@ -402,7 +402,7 @@ export default function Home() {
                   <Minus size={11} />
                 </button>
                 <span className="w-6 text-center font-bold text-sm text-gray-800 dark:text-gray-100">{state.numInfants}</span>
-                <button onClick={() => setField("numInfants", Math.min(state.numAdults, state.numInfants + 1))} disabled={state.numInfants >= state.numAdults}
+                <button onClick={() => setField("numInfants", Math.min(50, state.numInfants + 1))} disabled={state.numInfants >= 50}
                   className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center justify-center transition-colors">
                   <Plus size={11} />
                 </button>
@@ -439,7 +439,7 @@ export default function Home() {
           {(() => {
             const currencyMeta  = CURRENCIES.find(c => c.code === state.currency)!;
             const currSymbol    = currencyMeta.symbol;
-            const totalPax      = state.numAdults + state.numInfants;
+            const totalPax      = state.numAdults;
             const autoTier      = computeActiveTier(state.visaTiers, totalPax);
             const selectedId    = manualTierId ?? autoTier?.id ?? null;
             const selectedTier  = state.visaTiers.find(t => t.id === selectedId) ?? null;
@@ -517,7 +517,7 @@ export default function Home() {
                 </div>
                 {selectedTier && (
                   <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
-                    {manualTierId ? "Manual" : `${totalPax} pax`} → {currSymbol}{selectedTier.cost.toLocaleString()} per person
+                    {manualTierId ? "Manual" : `${totalPax} adult${totalPax !== 1 ? "s" : ""}`} → {currSymbol}{selectedTier.cost.toLocaleString()} per person
                     {state.currency !== "PKR" && currentPkrPerForeign !== null && (
                       <span className="text-gray-400 dark:text-gray-500 ml-1">
                         (≈ ₨{(selectedTier.cost * currentPkrPerForeign).toLocaleString()} PKR)

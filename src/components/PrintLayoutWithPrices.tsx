@@ -132,7 +132,7 @@ export default function PrintLayoutWithPrices({ state, result, hotels, flights }
               <th className="text-left py-2 px-4 font-semibold">Description</th>
               <th className="text-right py-2 px-4 font-semibold whitespace-nowrap">Per Adult (PKR)</th>
               {showInfants && (
-                <th className="text-right py-2 px-4 font-semibold whitespace-nowrap">Per Infant (PKR)</th>
+                <th className="text-right py-2 px-4 font-semibold whitespace-nowrap">Infant Total (PKR)</th>
               )}
             </tr>
           </thead>
@@ -144,8 +144,11 @@ export default function PrintLayoutWithPrices({ state, result, hotels, flights }
                   {item.adultAmountPKR > 0 ? fmt(item.adultAmountPKR) : <span className="text-gray-300">—</span>}
                 </td>
                 {showInfants && (
-                  <td className="py-2 px-4 text-right text-amber-700 font-medium whitespace-nowrap">
-                    {item.infantAmountPKR > 0 ? fmt(item.infantAmountPKR) : <span className="text-gray-300">—</span>}
+                  <td className="py-2 px-4 text-right font-medium whitespace-nowrap">
+                    {item.infantAmountPKR > 0
+                      ? <span className="text-amber-700">{fmt(item.infantAmountPKR)}</span>
+                      : <span className="text-gray-300">—</span>
+                    }
                   </td>
                 )}
               </tr>
@@ -162,19 +165,13 @@ export default function PrintLayoutWithPrices({ state, result, hotels, flights }
               <>
                 <tr className="border-b border-gray-100">
                   <td className="py-1.5 text-gray-500">Adults Subtotal ({result.numAdults} pax)</td>
-                  <td className="py-1.5 text-right font-medium text-gray-900 whitespace-nowrap">{fmt(result.adultSubtotalPKR * result.numAdults)}</td>
+                  <td className="py-1.5 text-right font-medium text-gray-900 whitespace-nowrap">{fmt(result.subtotalPKR)}</td>
                 </tr>
                 <tr className="border-b border-gray-100">
-                  <td className="py-1.5 text-amber-600">Infants Subtotal ({result.numInfants} pax)</td>
-                  <td className="py-1.5 text-right font-medium text-amber-700 whitespace-nowrap">{fmt(result.infantSubtotalPKR * result.numInfants)}</td>
+                  <td className="py-1.5 text-amber-600">Infant Charges ({result.numInfants} infant{result.numInfants !== 1 ? "s" : ""})</td>
+                  <td className="py-1.5 text-right font-medium text-amber-700 whitespace-nowrap">+{fmt(result.infantSubtotalPKR)}</td>
                 </tr>
               </>
-            )}
-            {result.discountPKR > 0 && (
-              <tr className="border-b border-gray-100">
-                <td className="py-1.5 text-emerald-600">Group Discount ({result.discountLabel})</td>
-                <td className="py-1.5 text-right font-medium text-emerald-600 whitespace-nowrap">−{fmt(result.discountPKR)}</td>
-              </tr>
             )}
             <tr className="bg-emerald-700 text-white">
               <td className="py-3 px-4 font-bold text-base">Total Package ({result.numAdults + result.numInfants} pax)</td>

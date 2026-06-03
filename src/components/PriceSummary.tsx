@@ -2,7 +2,7 @@
 
 import type { CalculationResult } from "@/types";
 import { formatCurrency } from "@/lib/calculator";
-import { Users, Baby, Tag, TrendingDown, Wallet, Printer, Link, Check, ChevronDown } from "lucide-react";
+import { Users, Baby, Tag, Wallet, Printer, Link, Check, ChevronDown } from "lucide-react";
 import Logo from "@/components/Logo";
 import { useState } from "react";
 
@@ -113,52 +113,36 @@ export default function PriceSummary({ result, onPrint }: Props) {
               )}
             </div>
             <div className="text-right shrink-0">
-              <div className="font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                {fmt(item.adultAmountPKR)}
+              <div className="font-medium whitespace-nowrap">
+                {item.adultAmountPKR > 0
+                  ? <span className="text-gray-900 dark:text-gray-100">{fmt(item.adultAmountPKR)}</span>
+                  : item.infantAmountPKR > 0
+                    ? <span className="text-amber-600 dark:text-amber-400">{fmt(item.infantAmountPKR)}</span>
+                    : <span className="text-gray-300">—</span>
+                }
               </div>
-              {showInfants && item.infantAmountPKR > 0 && (
-                <div className="font-medium text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">
-                  {fmt(item.infantAmountPKR)}
-                </div>
-              )}
             </div>
           </div>
         ))}
 
         {/* Subtotals */}
         <div className="border-t border-gray-100 dark:border-gray-700 pt-3 space-y-2">
-          {showInfants && (
-            <>
-              <div className="flex justify-between items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-                <span className="flex items-center gap-1.5 shrink-0">
-                  <Users size={13} />Adults subtotal ({result.numAdults})
-                </span>
-                <span className="font-medium whitespace-nowrap">{fmt(result.adultSubtotalPKR)}</span>
-              </div>
-              <div className="flex justify-between items-center gap-3 text-sm text-amber-600 dark:text-amber-400">
-                <span className="flex items-center gap-1.5 shrink-0">
-                  <Baby size={13} />Infants subtotal ({result.numInfants})
-                </span>
-                <span className="font-medium whitespace-nowrap">{fmt(result.infantSubtotalPKR)}</span>
-              </div>
-            </>
-          )}
-
           <div className="flex justify-between items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
             <span className="flex items-center gap-1.5 shrink-0">
-              <Users size={13} />Subtotal ({result.numAdults + result.numInfants} pax)
+              <Users size={13} />Subtotal ({result.numAdults} adult{result.numAdults !== 1 ? "s" : ""})
             </span>
             <span className="font-medium whitespace-nowrap">{fmt(result.subtotalPKR)}</span>
           </div>
 
-          {result.discountPKR > 0 && (
-            <div className="flex justify-between items-center gap-3 text-sm text-emerald-600 dark:text-emerald-400">
+          {showInfants && (
+            <div className="flex justify-between items-center gap-3 text-sm text-amber-600 dark:text-amber-400">
               <span className="flex items-center gap-1.5 shrink-0">
-                <TrendingDown size={13} />Group Discount ({result.discountLabel})
+                <Baby size={13} />Infant Charges ({result.numInfants} infant{result.numInfants !== 1 ? "s" : ""})
               </span>
-              <span className="font-medium whitespace-nowrap">−{fmt(result.discountPKR)}</span>
+              <span className="font-medium whitespace-nowrap">+{fmt(result.infantSubtotalPKR)}</span>
             </div>
           )}
+
         </div>
 
         {/* Total box */}
